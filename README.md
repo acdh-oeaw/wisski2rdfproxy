@@ -4,8 +4,11 @@ Generate [rdfproxy](https://github.com/acdh-oeaw/rdfproxy) models and queries fr
 
 ### Usage
 
-1. export pathbuilder json or xml (through web interface or [Wisski API](https://github.com/kaiamann/wisski_api))
+1. export pathbuilder json or xml (through [web interface](https://wiss-ki.eu/documentation/pathbuilder/export-import-pathbuilder) or [Wisski API](https://github.com/kaiamann/wisski_api))
 2. run ./wisski2rdfproxy.py
+
+
+Check `examples/output/` for the output of `./wisski2rdfproxy.py -j examples/releven_assertions_20240821.json -ee external_authority -ee person -o examples/output/releven`
 
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
@@ -34,14 +37,13 @@ options:
                         indentation to use for the python models (default: 4 spaces)
   -ee endpoint_id [exclude_field ...], --endpoint_exclude_fields endpoint_id [exclude_field ...]
                         NOT IMPLEMENTED YET: a path id for which to generate an
-                        endpoint, followed by 0 or more of its fields that should be
+                        endpoint, followed by 0 or more field paths that should be
                         excluded from the endpoint return value. any fields not in
-                        this list will be included by default. embedded fields can be
-                        specified like this: "person field1 field2.*" etc
+                        this list will be included by default.
   -ei endpoint_id [include_field ...], --endpoint_include_fields endpoint_id [include_field ...]
                         NOT IMPLEMENTED YET: a path id for which to generate an
-                        endpoint, followed by 0 or more of its fields that should be
-                        included in the endpoint return value model
+                        endpoint, followed by 1 or more field paths that should be
+                        included in the endpoint return value.
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
                         file prefix for the python model and SPARQL query fields that
                         will be generated for each endpoint (default: print both to
