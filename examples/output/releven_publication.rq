@@ -5,14 +5,14 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
-SELECT ?publication_publication_reference ?publication_publication_creation ?publication_publication_text_assertion ?publication_publication_creation_publication_creation_event
+SELECT
+?publication  
+  ?publication__publication_reference  
+  ?publication__publication_creation    
+    ?publication__publication_creation__publication_creation_event
 {
 ?publication a r11:Publication.
-?publication crm:P3_has_note ?publication_publication_reference.
-OPTIONAL ( ?publication_publication_creation crm:P141_assigned ?publication. )
-OPTIONAL ( ?publication_publication_text_assertion crm:P140_assigned_attribute_to ?publication. )
-?publication_publication_creation a star:E13_lrmoo_R24.
-?ppc_ppcpce crm:P141_assigned ?publication_publication_creation.
-?ppc_ppcpce crm:P140_assigned_attribute_to ?publication_publication_creation_publication_creation_event.
+?publication crm:P3_has_note ?publication__publication_reference.
+OPTIONAL { ?publication__publication_creation crm:P141_assigned ?publication. }
 }
 

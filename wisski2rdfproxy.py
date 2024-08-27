@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(prog, width=min(int(getenv('COLUMNS', 85)), 85))
 parser = argparse.ArgumentParser(formatter_class=formatter_class,
                     prog='./wisski2rdfproxy.py',
-                    description='Generate rdfproxy models and queries from Wisski pathbuilder specifications',
+                    description='Generate rdfproxy models and queries from WissKI pathbuilder specifications',
                     epilog=textwrap.dedent('''\
                         field include/exclude syntax:
 
@@ -36,21 +36,27 @@ parser = argparse.ArgumentParser(formatter_class=formatter_class,
                           %(prog)s -j wisski-pathbuilder-export.json -ee person foo
 
                           If no -endpoint_s are specified, generates full endpoints for all model classes by default.'''))
-parser.add_argument('-v', '--verbose', action='count', default=2, help='Increase the verbosity of the logging output: default is ERROR, use -v for WARNING, -vv for INFO, -vvv for DEBUG')
-i = parser.add_mutually_exclusive_group()#required=True)
+parser.add_argument('-v', '--verbose', action='count', default=0, help='Increase the verbosity of the logging output: default is WARNING, use -v for INFO, -vv for DEBUG')
+
+i = parser.add_argument_group('WissKI pathbuilder input (exactly one is required)')
+i = i.add_mutually_exclusive_group()
 i.add_argument('-j', '--json', metavar='wisski_api_export', type=argparse.FileType('r'), default='examples/releven_assertions_20240821.json', help='')
 i.add_argument('-x', '--xml', metavar='wisski_path_xml', type=argparse.FileType('r'), help='')
-parser.add_argument('-ns', '--namespace', nargs=2, metavar=('prefix', 'full_url'), action='append', help="namespace replacements to carry out, use a -ns for every prefix specification (default: %(default)s)", default=[['crm', 'http://www.cidoc-crm.org/cidoc-crm/'], ['lrmoo', 'http://iflastandards.info/ns/lrm/lrmoo/'], ['star', 'https://r11.eu/ns/star/'], ['skos', 'http://www.w3.org/2004/02/skos/core#'], ['r11', 'https://r11.eu/ns/spec/'], ['r11pros', 'https://r11.eu/ns/prosopography/']])
-parser.add_argument('-ee', '--endpoint_exclude_fields', nargs='+', metavar=('endpoint_id', 'exclude_field'), action='append', help='a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.', default=[])
-parser.add_argument('-ei', '--endpoint_include_fields', nargs='+', metavar=('endpoint_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
-# TODO implement
-# parser.add_argument('-a', '--auto-fix-recursive-embeddings', action='store_true', help='automatically fix embeddings')
-parser.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
-parser.add_argument('-i', '--indent', default='    ', help='indentation to use for the python models (default: 4 spaces)')
+
+i = parser.add_argument_group('Endpoint/model options', 'specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).\nIf no endpoints are given, lists all available types without generating any endpoints.')
+i.add_argument('-ee', '--endpoint_exclude_fields', nargs='+', metavar=('endpoint_id', 'exclude_field'), action='append', help='a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.', default=[])
+i.add_argument('-ei', '--endpoint_include_fields', nargs='+', metavar=('endpoint_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
+
+i = parser.add_argument_group('Output options')
+i.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
+i.add_argument('-r', '--limit-model-recursion', nargs='?', type=int, const=1, help='NOT IMPLEMENTED YET: automatically limit recursive model embeddings to this many levels (off by default)')
+
+i.add_argument('-i', '--indent', default='    ', help='indentation to use for the python models (default: 4 spaces)')
+i.add_argument('-ns', '--namespace', nargs=2, metavar=('prefix', 'full_url'), action='append', help="namespace replacements to carry out, use a -ns for every prefix specification (default: %(default)s)", default=[['crm', 'http://www.cidoc-crm.org/cidoc-crm/'], ['lrmoo', 'http://iflastandards.info/ns/lrm/lrmoo/'], ['star', 'https://r11.eu/ns/star/'], ['skos', 'http://www.w3.org/2004/02/skos/core#'], ['r11', 'https://r11.eu/ns/spec/'], ['r11pros', 'https://r11.eu/ns/prosopography/']])
 
 args = parser.parse_args()
 
-logging.basicConfig(level=max(10, 40 - 10*args.verbose), format = '%(levelname)s: %(message)s')
+logging.basicConfig(level=max(10, 30 - 10*args.verbose), format = '%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 def parse_filter_list(ls):
@@ -61,7 +67,7 @@ def parse_filter_list(ls):
 wisski_type_map = {
     # TODO add support for all Wisski field types: https://wiss-ki.eu/documentation/pathbuilder/configuration/lists
     'string': 'str',
-    'list_string': 'list[str]', # FIXME this doesn't get annotated properly
+    'list_string': 'list[str]', # FIXME this doesn't get annotated properly, need to change the Type's cardinality instead
     'uri': 'AnyUrl'
     }
 
@@ -107,14 +113,12 @@ class Type:
   def anchor(self):
     return f'?{self.id}'
 
-  def query(self):
-    return f'SELECT {", ".join(self.select())} {{ {"".join(self.bindings())} }}'
-
   def select(self):
-    return [ f.anchor() for f in self.fields ]
+    return [ '\n', self.anchor() ] + [ f'  {s}' for f in self.fields for s in f.select() ]
 
   def bindings(self):
     bindings = [f'{self.anchor()} a {self.paths[-1]}.']
+    # TODO recurse
     for f in self.fields:
       if f.is_class():
         prevvarname = self.anchor()
@@ -136,14 +140,14 @@ class Type:
       if f.cardinality == 1:
         bindings.append('\n'.join(fieldbindings))
       else:
-        bindings.append(f'OPTIONAL ( {"".join(fieldbindings)} )')
+        bindings.append(f'OPTIONAL {{ {"".join(fieldbindings)} }}')
     return bindings
 
   # internal helper fn
   def prepare_clone(self, ls, prefix):
     c = copy.copy(self)
     c.prefix = prefix + [c.field_name]
-    c.id = '_'.join(c.prefix)
+    c.id = '__'.join(c.prefix)
     split = parse_filter_list(ls)
     # TODO warn if any path of the split filter list does not exist at this level
     for key in split:
@@ -163,7 +167,17 @@ class Type:
     for i in range(1, 50):
       try:
         start = next(s for s in range(len(prefix) - i) if prefix[s:s+i] == prefix[s+i:s+2*i])
-        raise RuntimeError(f'recursive embedding in endpoint "{prefix[0]}":\n\n  {" -> ".join(prefix[start:start+i+1])}\n\nstarting at:\n\n  {".".join(prefix[1:start+1])}\n\nAt the very minimum, you probably want to exclude the following path:\n\n  {".".join(prefix[1:start+i+1])}.*')
+        raise RuntimeError(f'''recursive embedding in endpoint "{prefix[0]}":
+
+  {" -> ".join(prefix[start:start+i+1])}
+
+starting at:
+
+  {"the endpoint's top-level entity" if start == 0 else ".".join(prefix[1:start+1])}
+
+At the very minimum, you probably want to exclude the following path from the endpoint:
+   
+  {".".join(prefix[1:start+i+1])}.*''')
       except StopIteration:
         pass
 
@@ -257,64 +271,71 @@ def process_path(p):
     p = p.replace(path, f"{prefix}:") 
   return p
 
-types = { t.id: t for t in [ Type(path) for path in tree if path.find('enabled').text == '1' ] }
-logger.info(f'Found a total of {len(types)} enabled types')
-
-# create type uri -> Type lookup dict
-root_classes = { m.paths[-1]: m for m in types.values() if m.group == None }
-
-for t in types.values():
-  # if t.type == None:
-    # Upgrade to your own type
-    # t.type = t.camel_id()
-  if t.type == 'entity_reference':
-    # look up entity_references
-    entity_type = t.paths[-1]
-    try:
-      t.type = root_classes[entity_type]
-      logger.debug(f'resolved field {t.id} from {entity_type} -> {t.type}')
-    except KeyError:
-      logger.warning(f"field {t.id} is an entity reference, but couldn't find a model for the last element of its path ({entity_type})")
-      t.type = None
-      # del types[f.id] ?
-
-  # collect all field dependencies
-  if t.group != None:
-    try:
-      types[t.group].fields.append(t)
-    except KeyError:
-      logger.warning(f"{t.id} is part of group {t.group} which doesn't exist")
-      # TODO remove type?
-
-if len(args.endpoint_include_fields) + len(args.endpoint_exclude_fields) == 0:
-  args.endpoint_exclude_fields = [ [ t.id ] for t in types.values() if t.is_class() ]
-  logger.info(f'no endpoints specified, generating full endpoints for all {len(args.endpoint_exclude_fields)} models')
-  args.endpoint_exclude_fields = [['person']]
-
-def write_endpoint(name, t):
-  required_types = sorted(t.nested_types())
-  with open(f'{args.output_prefix}_{name}.py', 'w') if args.output_prefix else nullcontext(sys.stdout) as py:
-    with open(f'{args.output_prefix}_{name}.rq', 'w') if args.output_prefix else nullcontext(sys.stdout) as rq:
-
-      if py != sys.stdout:
-        py.write('from pydantic import BaseModel, AnyUrl\nfrom rdfproxy import SPARQLBinding\n\n')
-
-      selects = []
-      bindings = []
-      for n in required_types:
-        py.write(n.model())
-        py.write('\n\n')
-        selects = selects + n.select()
-        bindings = bindings + n.bindings()
-      for prefix, url in args.namespace:
-        rq.write(f'PREFIX {prefix}: <{url}>\n')
-      rq.write(f'\nSELECT {" ".join(selects)}\n{{\n')
-      rq.write("\n".join(bindings))
-      rq.write('\n}\n\n')
-
-  logger.info(f'Wrote endpoint "{name}" which consists of {len(required_types)} nested model class(es)')
-
 try:
+  types = { t.id: t for t in [ Type(path) for path in tree if path.find('enabled').text == '1' ] }
+  logger.info(f'Found a total of {len(types)} enabled types')
+
+  # create type uri -> Type lookup dict
+  root_classes = { m.paths[-1]: m for m in types.values() if m.group == None }
+  expected_n_root_classes = len([ t for t in types.values() if t.group == None ])
+  if len(root_classes) != expected_n_root_classes:
+    raise RuntimeError(f'there are {expected_n_root_classes} root paths, but only {len(root_classes)}')
+
+  for t in types.values():
+    # if t.type == None:
+      # Upgrade to your own type
+      # t.type = t.camel_id()
+    if t.type == 'entity_reference':
+      # look up entity_references
+      entity_type = t.paths[-1]
+      try:
+        t.type = root_classes[entity_type]
+        logger.debug(f'resolved field {t.id} from {entity_type} -> {t.type}')
+      except KeyError:
+        logger.warning(f"field {t.id} is an entity reference, but couldn't find a model for the last element of its path ({entity_type})")
+        t.type = None
+        # del types[f.id] ?
+
+    # collect all field dependencies
+    if t.group != None:
+      try:
+        types[t.group].fields.append(t)
+      except KeyError:
+        logger.warning(f"{t.id} is part of group {t.group} which doesn't exist")
+        # TODO remove type?
+
+  if len(args.endpoint_include_fields) + len(args.endpoint_exclude_fields) == 0:
+    # args.endpoint_exclude_fields = [ [ t.id ] for t in types.values() if t.is_class() ]
+    # logger.info(f'no endpoints specified, generating full endpoints for all {len(args.endpoint_exclude_fields)} models')
+    # args.endpoint_exclude_fields = [['person']]
+    print(f'\nno endpoints specified. here are all {len(types)} path ids that endpoints could be generated for:\n')
+    for t in sorted(types):
+      print(f' - {t}')
+    print(f'\nthe following {len(root_classes)} path ids are top-level types:\n')
+    for t in sorted([ (t.id, rdftype) for rdftype, t in root_classes.items() ]):
+      print(f' - {t[0]} ({t[1]})')
+    sys.exit(0)
+
+  def write_endpoint(name, t):
+    required_types = sorted(t.nested_types())
+    with open(f'{args.output_prefix}_{name}.py', 'w') if args.output_prefix else nullcontext(sys.stdout) as py:
+      with open(f'{args.output_prefix}_{name}.rq', 'w') if args.output_prefix else nullcontext(sys.stdout) as rq:
+
+        if py != sys.stdout:
+          py.write('from pydantic import BaseModel, AnyUrl\nfrom rdfproxy import SPARQLBinding\n\n')
+
+        for n in required_types:
+          py.write(n.model())
+          py.write('\n\n')
+
+        for prefix, url in args.namespace:
+          rq.write(f'PREFIX {prefix}: <{url}>\n')
+        rq.write(f'\nSELECT{"".join(t.select())}\n{{\n')
+        rq.write("\n".join(t.bindings()))
+        rq.write('\n}\n\n')
+
+    logger.info(f'Wrote endpoint "{name}" which consists of {len(required_types)} nested model class(es)')
+
   endpoints = { n: types[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields } | { n: types[n].clone_include(fields) for n, *fields in args.endpoint_include_fields }
 
   # write to files or stdout
