@@ -1,0 +1,33 @@
+PREFIX crm: <http://www.cidoc-crm.org/cidoc-crm/>
+PREFIX lrmoo: <http://iflastandards.info/ns/lrm/lrmoo/>
+PREFIX star: <https://r11.eu/ns/star/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX r11: <https://r11.eu/ns/spec/>
+PREFIX r11pros: <https://r11.eu/ns/prosopography/>
+
+SELECT ?person_person_id_assignment ?person_person_ethnicity_assertion ?person_person_descriptive_name ?person_person_possession_assertion ?person_person_status_assertion ?person_person_religion_assertion ?person_person_occupation_assertion ?person_person_language_assertion ?person_person_kinship_assertion ?person_birth_circumstances_claim ?person_person_death_assertion ?person_person_id_assignment_person_identifier_by_external_authority ?person_person_id_assignment_person_identifier ?person_person_id_assignment_person_identifier_person_identifier_is ?person_person_id_assignment_person_identifier_person_identifier_plain ?person_person_id_assignment_person_identifier_by_external_authority_external_authority_display_name ?person_person_id_assignment_person_identifier_by_external_authority_external_authority_url
+{
+?person a crm:E21_Person.
+OPTIONAL ( ?person_person_id_assignment crm:P140_assigned_attribute_to ?person. )
+OPTIONAL ( ?person_person_ethnicity_assertion crm:P141_assigned ?person. )
+OPTIONAL ( ?person crm:P3_has_note ?person_person_descriptive_name. )
+OPTIONAL ( ?person_person_possession_assertion crm:P141_assigned ?person. )
+OPTIONAL ( ?person_person_status_assertion crm:P141_assigned ?person. )
+OPTIONAL ( ?person_person_religion_assertion crm:P141_assigned ?person. )
+OPTIONAL ( ?person_person_occupation_assertion crm:P141_assigned ?person. )
+OPTIONAL ( ?person_person_language_assertion crm:P140_assigned_attribute_to ?person. )
+OPTIONAL ( ?person_person_kinship_assertion crm:P141_assigned ?person. )
+?person_birth_circumstances_claim crm:P141_assigned ?person.
+?person_person_death_assertion crm:P141_assigned ?person.
+?person_person_id_assignment a crm:E15_Identifier_Assignment.
+OPTIONAL (  )
+?ppia_ppiapi crm:P140_assigned_attribute_to ?person_person_id_assignment.
+?ppia_ppiapi crm:P37_assigned ?person_person_id_assignment_person_identifier.
+?person_person_id_assignment_person_identifier a crm:E42_Identifier.
+?person_person_id_assignment_person_identifier crm:P3_has_note ?person_person_id_assignment_person_identifier_person_identifier_is.
+?person_person_id_assignment_person_identifier crm:P190_has_symbolic_content ?person_person_id_assignment_person_identifier_person_identifier_plain.
+?person_person_id_assignment_person_identifier_by_external_authority a lrmoo:F11_Corporate_Body.
+?person_person_id_assignment_person_identifier_by_external_authority crm:P1_is_identified_by ?person_person_id_assignment_person_identifier_by_external_authority_external_authority_display_name.
+?person_person_id_assignment_person_identifier_by_external_authority skos:exactMatch ?person_person_id_assignment_person_identifier_by_external_authority_external_authority_url.
+}
+

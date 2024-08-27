@@ -12,9 +12,10 @@ Check `examples/output/` for the output of `./wisski2rdfproxy.py -j examples/rel
 
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
-                            [-ns prefix full_url] [-i INDENT]
+                            [-ns prefix full_url]
                             [-ee endpoint_id [exclude_field ...]]
                             [-ei endpoint_id [include_field ...]] [-o OUTPUT_PREFIX]
+                            [-i INDENT]
 
 Generate rdfproxy models and queries from Wisski pathbuilder specifications
 
@@ -33,21 +34,21 @@ options:
                         'http://www.w3.org/2004/02/skos/core#'], ['r11',
                         'https://r11.eu/ns/spec/'], ['r11pros',
                         'https://r11.eu/ns/prosopography/']])
-  -i INDENT, --indent INDENT
-                        indentation to use for the python models (default: 4 spaces)
   -ee endpoint_id [exclude_field ...], --endpoint_exclude_fields endpoint_id [exclude_field ...]
-                        NOT IMPLEMENTED YET: a path id for which to generate an
-                        endpoint, followed by 0 or more field paths that should be
-                        excluded from the endpoint return value. any fields not in
-                        this list will be included by default.
+                        a path id for which to generate an endpoint, followed by 0 or
+                        more field paths that should be excluded from the endpoint
+                        return value. any fields not in this list will be included by
+                        default.
   -ei endpoint_id [include_field ...], --endpoint_include_fields endpoint_id [include_field ...]
-                        NOT IMPLEMENTED YET: a path id for which to generate an
-                        endpoint, followed by 1 or more field paths that should be
-                        included in the endpoint return value.
+                        a path id for which to generate an endpoint, followed by 1 or
+                        more field paths that should be included in the endpoint
+                        return value.
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
                         file prefix for the python model and SPARQL query fields that
                         will be generated for each endpoint (default: print both to
                         stdout)
+  -i INDENT, --indent INDENT
+                        indentation to use for the python models (default: 4 spaces)
 
 field include/exclude syntax:
 

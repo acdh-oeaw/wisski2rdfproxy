@@ -1,0 +1,14 @@
+PREFIX crm: <http://www.cidoc-crm.org/cidoc-crm/>
+PREFIX lrmoo: <http://iflastandards.info/ns/lrm/lrmoo/>
+PREFIX star: <https://r11.eu/ns/star/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX r11: <https://r11.eu/ns/spec/>
+PREFIX r11pros: <https://r11.eu/ns/prosopography/>
+
+SELECT ?external_authority_external_authority_display_name ?external_authority_external_authority_url
+{
+?external_authority a lrmoo:F11_Corporate_Body.
+?external_authority crm:P1_is_identified_by ?external_authority_external_authority_display_name.
+?external_authority skos:exactMatch ?external_authority_external_authority_url.
+}
+
