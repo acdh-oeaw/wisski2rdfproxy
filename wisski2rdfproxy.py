@@ -44,12 +44,12 @@ i.add_argument('-j', '--json', metavar='wisski_api_export', type=argparse.FileTy
 i.add_argument('-x', '--xml', metavar='wisski_path_xml', type=argparse.FileType('r'), help='')
 
 i = parser.add_argument_group('Endpoint/model options', 'specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).\nIf no endpoints are given, lists all available types without generating any endpoints.')
-i.add_argument('-ee', '--endpoint_exclude_fields', nargs='+', metavar=('endpoint_id', 'exclude_field'), action='append', help='a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.', default=[])
-i.add_argument('-ei', '--endpoint_include_fields', nargs='+', metavar=('endpoint_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
+i.add_argument('-ee', '--endpoint_exclude_fields', nargs='+', metavar=('path_id', 'exclude_field'), action='append', help='a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.', default=[])
+i.add_argument('-ei', '--endpoint_include_fields', nargs='+', metavar=('path_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
 
 i = parser.add_argument_group('Output options')
 i.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
-i.add_argument('-r', '--limit-model-recursion', nargs='?', type=int, const=1, help='NOT IMPLEMENTED YET: automatically limit recursive model embeddings to this many levels (off by default)')
+i.add_argument('-r', '--auto-limit-model-recursion', nargs='?', type=int, const=1, help='NOT IMPLEMENTED YET: automatically limit recursive model embeddings to this many levels (off by default)')
 
 i.add_argument('-i', '--indent', default='    ', help='indentation to use for the python models (default: 4 spaces)')
 i.add_argument('-ns', '--namespace', nargs=2, metavar=('prefix', 'full_url'), action='append', help="namespace replacements to carry out, use a -ns for every prefix specification (default: %(default)s)", default=[['crm', 'http://www.cidoc-crm.org/cidoc-crm/'], ['lrmoo', 'http://iflastandards.info/ns/lrm/lrmoo/'], ['star', 'https://r11.eu/ns/star/'], ['skos', 'http://www.w3.org/2004/02/skos/core#'], ['r11', 'https://r11.eu/ns/spec/'], ['r11pros', 'https://r11.eu/ns/prosopography/']])
@@ -145,21 +145,26 @@ class Type:
 
   # internal helper fn
   def prepare_clone(self, ls, prefix):
+    logger.debug(f'cloning {self.id} (type {self.type})')
+    # c = copy.copy(self.type if isinstance(self.type, Type) else self)
     c = copy.copy(self)
-    c.prefix = prefix + [c.field_name]
+    c.prefix = prefix + [self.id if isinstance(self.type, Type) else c.field_name]
     c.id = '__'.join(c.prefix)
     split = parse_filter_list(ls)
-    # TODO warn if any path of the split filter list does not exist at this level
     for key in split:
       if key == '*':
         continue
       exists = False
-      for f in self.fields:
-        if f.id == key or isinstance(f.type, Type) and f.type.id == key:
+      logger.debug(f'{self.id}: looking through {[str(f) for f in self.fields]}')
+      for f in c.fields:
+        logger.debug(f'{self.id}: {f.id} {f.type}')
+        if f.id == key:# or isinstance(f.type, Type) and f.type.id == key:
+          logger.debug(f'found {key} in {"field of " + c.id if f.id == key else "entity reference"}')
           exists = True
           break
       if not exists:
-        logger.warning(f'unknown field specified in include/exclude list: {".".join(prefix[1:] + [key])}')
+        logger.warning(f'unknown field specified in include/exclude list: {".".join(prefix[1:])}  {key}')
+      logger.debug(f'field list at {prefix} {key}: {split}')
     return (c, split)
 
   def handle_recursion(self, prefix):
@@ -197,7 +202,7 @@ At the very minimum, you probably want to exclude the following path from the en
     try:
       # resolve entity_references -- recursion might happen here!
       if isinstance(c.type, Type):
-        return c.type.clone_exclude(exclude, c.prefix)
+        return c.type.clone_exclude(exclude, c.prefix)#, self.field_name)
 
       c.fields = [ f.clone_exclude(excludes.get(f.field_name, []), c.prefix) for f in self.fields if excludes.get(f.field_name, None) != [] ]
       return c
@@ -248,14 +253,14 @@ At the very minimum, you probably want to exclude the following path from the en
     return self.id > other.id
 
   def __str__(self):
-    return str(self.type)
+    return str(self.camel_id())
     # return str(self.type) + '\n'.join([ str(f) for f in self.fields ])
 
   def field(self):
     if self.cardinality == 1:
-      return f'{self.field_name}: Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]'
+      return f'{self.field_name}: Annotated[{str(self.type)}, SPARQLBinding("{self.anchor()}")]'
     else:
-      return f'{self.field_name}: list[Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]]'
+      return f'{self.field_name}: list[Annotated[{str(self.type)}, SPARQLBinding("{self.anchor()}")]]'
 
 
 if args.json:
@@ -341,6 +346,9 @@ try:
   # write to files or stdout
   for name, endpoint_types in endpoints.items():
     write_endpoint(name, endpoint_types)
+
+  if not args.output_prefix:
+    print('info only, use the -o argument to write the models and queries to file(s)')
 
 except RuntimeError as e:
   logger.error(e)

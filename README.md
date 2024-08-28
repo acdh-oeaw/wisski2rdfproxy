@@ -16,9 +16,9 @@ Generate [rdfproxy](https://github.com/acdh-oeaw/rdfproxy) models and queries fr
 
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
-                            [-ee endpoint_id [exclude_field ...]]
-                            [-ei endpoint_id [include_field ...]] [-o OUTPUT_PREFIX]
-                            [-r [LIMIT_MODEL_RECURSION]] [-i INDENT]
+                            [-ee path_id [exclude_field ...]]
+                            [-ei path_id [include_field ...]] [-o OUTPUT_PREFIX]
+                            [-r [AUTO_LIMIT_MODEL_RECURSION]] [-i INDENT]
                             [-ns prefix full_url]
 
 Generate rdfproxy models and queries from WissKI pathbuilder specifications
@@ -36,12 +36,12 @@ Endpoint/model options:
   specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).
   If no endpoints are given, lists all available types without generating any endpoints.
 
-  -ee endpoint_id [exclude_field ...], --endpoint_exclude_fields endpoint_id [exclude_field ...]
+  -ee path_id [exclude_field ...], --endpoint_exclude_fields path_id [exclude_field ...]
                         a path id for which to generate an endpoint, followed by 0 or
                         more field paths that should be excluded from the endpoint
                         return value. any fields not in this list will be included by
                         default.
-  -ei endpoint_id [include_field ...], --endpoint_include_fields endpoint_id [include_field ...]
+  -ei path_id [include_field ...], --endpoint_include_fields path_id [include_field ...]
                         a path id for which to generate an endpoint, followed by 1 or
                         more field paths that should be included in the endpoint
                         return value.
@@ -51,7 +51,7 @@ Output options:
                         file prefix for the python model and SPARQL query fields that
                         will be generated for each endpoint (default: print both to
                         stdout)
-  -r [LIMIT_MODEL_RECURSION], --limit-model-recursion [LIMIT_MODEL_RECURSION]
+  -r [AUTO_LIMIT_MODEL_RECURSION], --auto-limit-model-recursion [AUTO_LIMIT_MODEL_RECURSION]
                         NOT IMPLEMENTED YET: automatically limit recursive model
                         embeddings to this many levels (off by default)
   -i INDENT, --indent INDENT
