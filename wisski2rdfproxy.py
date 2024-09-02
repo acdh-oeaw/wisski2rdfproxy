@@ -11,6 +11,8 @@ import sys
 import textwrap
 import xml.etree.ElementTree as ET
 
+sys.setrecursionlimit(100)
+
 formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(prog, width=min(int(getenv('COLUMNS', 85)), 85))
 parser = argparse.ArgumentParser(formatter_class=formatter_class,
                     prog='./wisski2rdfproxy.py',
@@ -71,101 +73,68 @@ wisski_type_map = {
     'uri': 'AnyUrl'
     }
 
-class Type:
+class Field:
+  """
+  A field has a name (str) and a type (either a str denoting a Python primitive, or an instance of Type)
+  """
   def __init__(self, path):
-    self.fields = []
-    self.id = path.find('id').text
-    # id might change during cloning, field name should stay the same
-    self.field_name = self.clean_id().replace(' ', '_')
-    self.cardinality = int(path.find('cardinality').text)
-    self.name = path.find('name').text
-
+    self.name = path.find('id').text
     self.paths  = [process_path(el.text) for el in path.find('path_array')]
     self.group = path.find('group_id').text
     if self.group == '0':
       self.group = None
+    self.cardinality = int(path.find('cardinality').text)
+    tp = path.find('fieldtype').text
 
-    self.type = path.find('fieldtype').text
-    if self.type in wisski_type_map:
-      self.type = wisski_type_map[self.type]
-    self.datatype_property = process_path(path.find('datatype_property').text)
-    # if self.datatype != 'empty':
-      # self.type = process_path(self.datatype)
+    if tp in wisski_type_map:
+      self.type = wisski_type_map[tp] # TODO throw error if type is not implemented yet
+      self.datatype_property = process_path(path.find('datatype_property').text)
+    elif tp == 'entity_reference':
+      self.type = None # needs to be resolved
+    else:
+      self.type = Type(path)
 
-  def clean_id(self):
-    return self.id.translate({ord(i): ' ' for i in '*()/_'})
+  # return a set of this field's type and all its nested types
+  # the result set is built up incrementally to avoid recursion
+  def nested_types(self, collection = set()):
+    if not isinstance(self.type, Type) or self.type in collection:
+      return collection
+    collection.add(self.type)
+    for n in self.type.fields:
+      collection = n.nested_types(collection)
+    return collection
 
-  def camel_id(self):
-    return self.clean_id().title().replace(' ', '')
+  def prepare_clone(self, prefix):
+    logger.debug(f'cloning field {self.name} (type {self.type})')
+    f = copy.copy(self)
+    f.prefix = prefix + [self.name]
+    return f
 
-  def short_var(self):
-    return ''.join(w[0] for w in self.clean_id().split(' ') if len(w))
+  def clone_exclude(self, exclude, prefix=[]):
+    if isinstance(self.type, Type):
+      f = self.prepare_clone(prefix)
+      if '*' in exclude:
+        # f.type.fields = []
+        # f.datatype_property = f.type.paths[-1] # FIXME this isn't right
+        f.type = wisski_type_map['uri']
+        f.datatype_property = 'TODO'
+        return f
+      try:
+        f.type = f.type.clone_exclude(exclude, f.prefix)
+      except RecursionError:
+        # TODO if args.auto_fix_recursive_embeddings:
+        self.handle_recursion(prefix)
+      return f
+    else:
+      return self # no need to clone?
 
-  # def clean_name(self):
-    # self.cleanname = self.name.lower().translate({ord(i): None for i in '*()/_'}).strip()
-  def binding_name(self):
-    return self.clean_id().replace(' ', '')
-
-  def is_class(self):
-    return self.datatype_property == 'empty'
-    # return self.type == entity_reference
-
-  def anchor(self):
-    return f'?{self.id}'
-
-  def select(self):
-    return [ '\n', self.anchor() ] + [ f'  {s}' for f in self.fields for s in f.select() ]
-
-  def bindings(self):
-    bindings = [f'{self.anchor()} a {self.paths[-1]}.']
-    # TODO recurse
-    for f in self.fields:
-      if f.is_class():
-        prevvarname = self.anchor()
-        fieldbindings = []
-        for i in range(int((len(f.paths)) / 2)):
-          nextvarname = f.anchor() if 2*(i+1)+1 == len(f.paths) else f'?{self.short_var()}_{"_" * i}{f.short_var()}'
-          p = f.paths[2*i + 1]
-          fieldbindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
-          prevvarname = nextvarname
-      else:
-        fieldbindings = [f'{self.anchor()} {f.datatype_property} {f.anchor()}.' ]
-        # FIXME need to include path, not just datatype_property?
-        # try:
-          # fieldbindings.append(f'{prevvarname} {f.property} {f.anchor()}.')
-        # except AttributeError:
-          # logger.warning(f'failed to bind {f.id} in {self.id}')
-          # pass
-
-      if f.cardinality == 1:
-        bindings.append('\n'.join(fieldbindings))
-      else:
-        bindings.append(f'OPTIONAL {{ {"".join(fieldbindings)} }}')
-    return bindings
-
-  # internal helper fn
-  def prepare_clone(self, ls, prefix):
-    logger.debug(f'cloning {self.id} (type {self.type})')
-    # c = copy.copy(self.type if isinstance(self.type, Type) else self)
-    c = copy.copy(self)
-    c.prefix = prefix + [self.id if isinstance(self.type, Type) else c.field_name]
-    c.id = '__'.join(c.prefix)
-    split = parse_filter_list(ls)
-    for key in split:
-      if key == '*':
-        continue
-      exists = False
-      logger.debug(f'{self.id}: looking through {[str(f) for f in self.fields]}')
-      for f in c.fields:
-        logger.debug(f'{self.id}: {f.id} {f.type}')
-        if f.id == key:# or isinstance(f.type, Type) and f.type.id == key:
-          logger.debug(f'found {key} in {"field of " + c.id if f.id == key else "entity reference"}')
-          exists = True
-          break
-      if not exists:
-        logger.warning(f'unknown field specified in include/exclude list: {".".join(prefix[1:])}  {key}')
-      logger.debug(f'field list at {prefix} {key}: {split}')
-    return (c, split)
+  def clone_include(self, include, prefix=[]):
+    if isinstance(self.type, Type):
+      f = self.prepare_clone(prefix)
+      # TODO implement
+      return f
+    else:
+      return self # no need to clone?
 
   def handle_recursion(self, prefix):
     # try to find recursion pattern -- identical adjacent sequences of path ids
@@ -188,28 +157,112 @@ At the very minimum, you probably want to exclude the following path from the en
 
     raise RuntimeError(f"recursive embedding in endpoint \"{prefix[0]}\" (unable to locate it, recursion step > 50 ?")
 
+  def short_var(self):
+    return ''.join(w[0] for w in self.clean_id().split(' ') if len(w))
+
+  def anchor(self):
+    return f'?{self.name}'
+
+  def bindings(self):
+    if isinstance(self.type, Type):
+      return self.type.bindings(self.anchor())
+    else:
+      return []
+
+  def select(self):
+    if isinstance(self.type, Type):
+      return self.type.select(self.anchor())
+    else:
+      return [ self.anchor() ]
+
+  def __str__(self):
+    if self.cardinality == 1:
+      return f'{self.name}: Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]'
+    else:
+      return f'{self.name}: list[Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]]'
+
+  def __gt__(self, other):
+    return str(self) > str(other)
+
+
+class Type:
+  """
+  A type has an id (really a CamelCase classname, str), a name (str describing the type) and fields (Field[])
+  """
+  def __init__(self, path):
+    self.fields = []
+    self.prefix = []
+    self.id = path.find('id').text
+    self.name = path.find('name').text
+    self.paths  = [process_path(el.text) for el in path.find('path_array')]
+
+  def classname(self):
+    return '_'.join(map(lambda el: el.replace('_', ' ').title().replace(' ', ''), [self.id] if self.prefix == [] else self.prefix))
+
+  # def clean_name(self):
+    # self.cleanname = self.name.lower().translate({ord(i): None for i in '*()/_'}).strip()
+  # def binding_name(self):
+    # return self.clean_id().replace(' ', '')
+
+  def select(self, anchor_var):
+    return [ anchor_var ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
+
+  def bindings(self, anchor_var):
+    # FIXME what if it's a multi-step from the parent to this?
+    bindings = [f'{anchor_var} a {self.paths[-1]}.']
+    for f in self.fields:
+      if isinstance(f.type, Type):
+        prevvarname = f.anchor()
+        fieldbindings = []
+        for i in range(int((len(f.paths)) / 2)):
+          nextvarname = f.anchor() if 2*(i+1)+1 == len(f.paths) else f'?{self.short_var()}_{"_" * i}{f.short_var()}'
+          p = f.paths[2*i + 1]
+          fieldbindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
+          prevvarname = nextvarname
+      else:
+        fieldbindings = [f'{anchor_var} {f.datatype_property} {f.anchor()}.' ]
+        # FIXME need to include path, not just datatype_property?
+        # try:
+          # fieldbindings.append(f'{prevvarname} {f.property} {f.anchor()}.')
+        # except AttributeError:
+          # logger.warning(f'failed to bind {f.id} in {self.id}')
+          # pass
+
+      if f.cardinality == 1:
+        bindings.append('\n'.join(fieldbindings))
+      else:
+        bindings.extend(['OPTIONAL {', *[ f'{args.indent}{b}' for b in fieldbindings ], '}'])
+    return [ f'{args.indent}{b}' for b in bindings ]
+
+  # internal helper fn
+  def prepare_clone(self, ls, prefix):
+    logger.debug(f'cloning type {self}')
+    # c = copy.copy(self.type if isinstance(self.type, Type) else self)
+    c = copy.copy(self)
+    c.prefix = prefix
+    split = parse_filter_list(ls)
+    for key in split:
+      if key == '*':
+        logger.info(f'found * in prepare clone of type {c}')
+        continue
+      exists = False
+      for f in c.fields:
+        if f.name == key:
+          logger.debug(f'found {key} in {"field of " + c.id if f.name == key else "entity reference"}')
+          exists = True
+          break
+      if not exists:
+        logger.warning(f'unknown field specified in include/exclude list: {".".join(prefix[1:])}  {key}')
+      logger.debug(f'field list at {".".join(prefix)}.{key}: {split}')
+    return (c, split)
+
 
   # exclude is a list of "*", "fieldname", "fieldname.subfieldname" or "fieldname.*"
   def clone_exclude(self, exclude, prefix=[]):
     c, excludes = self.prepare_clone(exclude, prefix)
 
-    if '*' in exclude:
-      c.fields = []
-      c.type = wisski_type_map['uri']
-      return c
-
-    # while True: # for retrying on exception
-    try:
-      # resolve entity_references -- recursion might happen here!
-      if isinstance(c.type, Type):
-        return c.type.clone_exclude(exclude, c.prefix)#, self.field_name)
-
-      c.fields = [ f.clone_exclude(excludes.get(f.field_name, []), c.prefix) for f in self.fields if excludes.get(f.field_name, None) != [] ]
-      return c
-
-    except RecursionError:
-      # TODO if args.auto_fix_recursive_embeddings:
-      self.handle_recursion(prefix)
+    c.fields = [ f.clone_exclude(excludes.get(f.name, []), c.prefix) for f in self.fields if excludes.get(f.name, None) != [] ]
+    return c
 
   def clone_include(self, include, prefix=[]):
     c, includes = self.prepare_clone(include, prefix)
@@ -227,40 +280,33 @@ At the very minimum, you probably want to exclude the following path from the en
 
   # return pydantic model definition
   def model(self):
-    return f'''class {self.camel_id()}(BaseModel):
+    return f'''class {self.classname()}(BaseModel):
 {args.indent}class Config:
 {2*args.indent}title = "{self.name}"
-''' + ('\n'.join(f'{args.indent}{f.field()}' for f in self.fields) + '\n')
+''' + ('\n'.join(f'{args.indent}{f}' for f in self.fields) + '\n')
 # {2*args.indent}rdfproxy_anchor = "?{self.id}"
 
   # return a set of this type and all its nested types
   # the result set is built up incrementally to avoid recursion
-  def nested_types(self, collection = set()):
-    if self in collection:
-      return collection
-    if len(self.fields):
-      collection.add(self)
-    if isinstance(self.type, Type):
-      # entity_reference
-      for n in self.type.nested_types():
-        collection = n.nested_types(collection)
-    else:
-      for n in self.fields:
-        collection = n.nested_types(collection)
-    return collection
+  # def nested_types(self, collection = set()):
+  #   if self in collection:
+  #     return collection
+  #   if len(self.fields):
+  #     collection.add(self)
+  #   if isinstance(self.type, Type):
+  #     # entity_reference
+  #     for n in self.type.nested_types():
+  #       collection = n.nested_types(collection)
+  #   else:
+  #     for n in self.fields:
+  #       collection = n.nested_types(collection)
+  #   return collection
 
   def __gt__(self, other):
-    return self.id > other.id
+    return str(self) > str(other)
 
   def __str__(self):
-    return str(self.camel_id())
-    # return str(self.type) + '\n'.join([ str(f) for f in self.fields ])
-
-  def field(self):
-    if self.cardinality == 1:
-      return f'{self.field_name}: Annotated[{str(self.type)}, SPARQLBinding("{self.anchor()}")]'
-    else:
-      return f'{self.field_name}: list[Annotated[{str(self.type)}, SPARQLBinding("{self.anchor()}")]]'
+    return self.classname()
 
 
 if args.json:
@@ -277,48 +323,42 @@ def process_path(p):
   return p
 
 try:
-  types = { t.id: t for t in [ Type(path) for path in tree if path.find('enabled').text == '1' ] }
-  logger.info(f'Found a total of {len(types)} enabled types')
+  paths = { p.name: p for p in [ Field(path) for path in tree if path.find('enabled').text == '1' ] }
+  logger.info(f'Found a total of {len(paths)} enabled paths')
 
   # create type uri -> Type lookup dict
-  root_classes = { m.paths[-1]: m for m in types.values() if m.group == None }
-  expected_n_root_classes = len([ t for t in types.values() if t.group == None ])
-  if len(root_classes) != expected_n_root_classes:
-    raise RuntimeError(f'there are {expected_n_root_classes} root paths, but only {len(root_classes)}')
+  root_types = { m.type.paths[-1]: m.type for m in paths.values() if m.group == None }
+  expected_n_root_classes = len([ t for t in paths.values() if t.group == None ])
+  if len(root_types) != expected_n_root_classes:
+    raise RuntimeError(f'there are {expected_n_root_classes} root paths, but only {len(root_types)}')
 
-  for t in types.values():
-    # if t.type == None:
+  for p in paths.values():
+    if p.type == None:
       # Upgrade to your own type
-      # t.type = t.camel_id()
-    if t.type == 'entity_reference':
-      # look up entity_references
-      entity_type = t.paths[-1]
+      entity_type = p.paths[-1]
       try:
-        t.type = root_classes[entity_type]
-        logger.debug(f'resolved field {t.id} from {entity_type} -> {t.type}')
+        p.type = root_types[entity_type]
+        logger.debug(f'resolved field {p.name} from rdf class "{entity_type}" to model type "{p.type}"')
       except KeyError:
-        logger.warning(f"field {t.id} is an entity reference, but couldn't find a model for the last element of its path ({entity_type})")
-        t.type = None
+        logger.warning(f"field {p.name} is an entity reference, but couldn't find a model for the last element of its path ({entity_type})")
+        p.type = None
         # del types[f.id] ?
 
     # collect all field dependencies
-    if t.group != None:
+    if p.group != None:
       try:
-        types[t.group].fields.append(t)
+        paths[p.group].type.fields.append(p)
       except KeyError:
-        logger.warning(f"{t.id} is part of group {t.group} which doesn't exist")
+        logger.warning(f"{p.id} is part of group {p.group} which doesn't exist")
         # TODO remove type?
 
   if len(args.endpoint_include_fields) + len(args.endpoint_exclude_fields) == 0:
-    # args.endpoint_exclude_fields = [ [ t.id ] for t in types.values() if t.is_class() ]
-    # logger.info(f'no endpoints specified, generating full endpoints for all {len(args.endpoint_exclude_fields)} models')
-    # args.endpoint_exclude_fields = [['person']]
-    print(f'\nno endpoints specified. here are all {len(types)} path ids that endpoints could be generated for:\n')
-    for t in sorted(types):
-      print(f' - {t}')
-    print(f'\nthe following {len(root_classes)} path ids are top-level types:\n')
-    for t in sorted([ (t.id, rdftype) for rdftype, t in root_classes.items() ]):
-      print(f' - {t[0]} ({t[1]})')
+    print(f'\nno endpoints specified. here are all {len(paths)} path ids that endpoints could be generated for:\n')
+    for p in sorted(paths):
+      print(f' - {p}')
+    print(f'\nthese are the {len(root_types)} path ids that are top-level types (and their corresponding rdf classes):\n')
+    for p in sorted([ (t.id, rdftype) for rdftype, t in root_types.items() ]):
+      print(f' - {p[0]} ({p[1]})')
     sys.exit(0)
 
   def write_endpoint(name, t):
@@ -335,20 +375,23 @@ try:
 
         for prefix, url in args.namespace:
           rq.write(f'PREFIX {prefix}: <{url}>\n')
-        rq.write(f'\nSELECT{"".join(t.select())}\n{{\n')
+        rq.write('\nSELECT\n')
+        for s in t.select():
+          rq.write(f'{s}\n')
+        rq.write('\nWHERE {\n')
         rq.write("\n".join(t.bindings()))
         rq.write('\n}\n\n')
 
     logger.info(f'Wrote endpoint "{name}" which consists of {len(required_types)} nested model class(es)')
 
-  endpoints = { n: types[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields } | { n: types[n].clone_include(fields) for n, *fields in args.endpoint_include_fields }
+  endpoints = { n: paths[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields } | { n: paths[n].clone_include(fields) for n, *fields in args.endpoint_include_fields }
 
   # write to files or stdout
   for name, endpoint_types in endpoints.items():
     write_endpoint(name, endpoint_types)
 
   if not args.output_prefix:
-    print('info only, use the -o argument to write the models and queries to file(s)')
+    print('\nOutput is informational only, use the -o argument to write the models and queries to file(s)')
 
 except RuntimeError as e:
   logger.error(e)

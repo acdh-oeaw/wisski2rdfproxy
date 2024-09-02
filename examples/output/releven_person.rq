@@ -6,38 +6,59 @@ PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
 SELECT
-?person  
-  ?person__person_id_assignment    
-    ?person__person_id_assignment__person_identifier_by__external_authority      
-      ?person__person_id_assignment__person_identifier_by__external_authority__external_authority_display_name      
-      ?person__person_id_assignment__person_identifier_by__external_authority__external_authority_url    
-    ?person__person_id_assignment__person_identifier      
-      ?person__person_id_assignment__person_identifier__person_identifier_is      
-      ?person__person_id_assignment__person_identifier__person_identifier_plain  
-  ?person__person_gender_assertion  
-  ?person__person_ethnicity_assertion  
-  ?person__person_descriptive_name  
-  ?person__person_possession_assertion  
-  ?person__person_status_assertion  
-  ?person__person_religion_assertion  
-  ?person__person_occupation_assertion  
-  ?person__person_language_assertion  
-  ?person__person_kinship_assertion  
-  ?person__birth_circumstances_claim  
-  ?person__person_death_assertion
-{
-?person a crm:E21_Person.
-OPTIONAL { ?person__person_id_assignment crm:P140_assigned_attribute_to ?person. }
-OPTIONAL { ?person__person_gender_assertion crm:P141_assigned ?person. }
-OPTIONAL { ?person__person_ethnicity_assertion crm:P141_assigned ?person. }
-OPTIONAL { ?person crm:P3_has_note ?person__person_descriptive_name. }
-OPTIONAL { ?person__person_possession_assertion crm:P141_assigned ?person. }
-OPTIONAL { ?person__person_status_assertion crm:P141_assigned ?person. }
-OPTIONAL { ?person__person_religion_assertion crm:P141_assigned ?person. }
-OPTIONAL { ?person__person_occupation_assertion crm:P141_assigned ?person. }
-OPTIONAL { ?person__person_language_assertion crm:P140_assigned_attribute_to ?person. }
-OPTIONAL { ?person__person_kinship_assertion crm:P141_assigned ?person. }
-?person__birth_circumstances_claim crm:P141_assigned ?person.
-?person__person_death_assertion crm:P141_assigned ?person.
+?person
+    ?person_id_assignment
+        ?person_identifier_by
+            ?external_authority_display_name
+            ?external_authority_url
+        ?person_identifier
+            ?person_identifier_is
+            ?person_identifier_plain
+    ?person_gender_assertion
+    ?person_ethnicity_assertion
+    ?person_descriptive_name
+    ?person_possession_assertion
+    ?person_status_assertion
+    ?person_religion_assertion
+    ?person_occupation_assertion
+    ?person_language_assertion
+    ?person_kinship_assertion
+    ?birth_circumstances_claim
+    ?person_death_assertion
+
+WHERE {
+    ?person a crm:E21_Person.
+    OPTIONAL {
+        ?person_id_assignment crm:P140_assigned_attribute_to ?person_id_assignment.
+    }
+    OPTIONAL {
+        ?person TODO ?person_gender_assertion.
+    }
+    OPTIONAL {
+        ?person TODO ?person_ethnicity_assertion.
+    }
+    OPTIONAL {
+        ?person crm:P3_has_note ?person_descriptive_name.
+    }
+    OPTIONAL {
+        ?person TODO ?person_possession_assertion.
+    }
+    OPTIONAL {
+        ?person TODO ?person_status_assertion.
+    }
+    OPTIONAL {
+        ?person TODO ?person_religion_assertion.
+    }
+    OPTIONAL {
+        ?person TODO ?person_occupation_assertion.
+    }
+    OPTIONAL {
+        ?person TODO ?person_language_assertion.
+    }
+    OPTIONAL {
+        ?person TODO ?person_kinship_assertion.
+    }
+    ?person TODO ?birth_circumstances_claim.
+    ?person TODO ?person_death_assertion.
 }
 

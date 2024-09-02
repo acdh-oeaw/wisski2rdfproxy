@@ -6,13 +6,16 @@ PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
 SELECT
-?publication  
-  ?publication__publication_reference  
-  ?publication__publication_creation    
-    ?publication__publication_creation__publication_creation_event
-{
-?publication a r11:Publication.
-?publication crm:P3_has_note ?publication__publication_reference.
-OPTIONAL { ?publication__publication_creation crm:P141_assigned ?publication. }
+?publication
+    ?publication_reference
+    ?publication_creation
+        ?publication_creation_event
+
+WHERE {
+    ?publication a r11:Publication.
+    ?publication crm:P3_has_note ?publication_reference.
+    OPTIONAL {
+        ?publication_creation crm:P141_assigned ?publication_creation.
+    }
 }
 
