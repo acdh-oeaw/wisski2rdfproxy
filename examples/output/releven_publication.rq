@@ -12,10 +12,17 @@ SELECT
         ?publication_creation_event
 
 WHERE {
-    ?publication a r11:Publication.
+?publication a r11:Publication.
+
     ?publication crm:P3_has_note ?publication_reference.
-    OPTIONAL {
-        ?publication_creation crm:P141_assigned ?publication_creation.
+
+    OPTIONAL { 
+    ?publication_creation crm:P141_assigned ?publication.
+    ?publication_creation a star:E13_lrmoo_R24.
+    
+        ?pc_pce crm:P141_assigned ?publication_creation.
+        ?pc_pce crm:P140_assigned_attribute_to ?publication_creation_event.
+        ?publication_creation_event a lrmoo:F30_Manifestation_Creation.
     }
 }
 

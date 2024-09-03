@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 sys.setrecursionlimit(100)
 
-formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(prog, width=min(int(getenv('COLUMNS', 85)), 85))
+formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(prog, width=min(int(getenv('COLUMNS', 82)), 82))
 parser = argparse.ArgumentParser(formatter_class=formatter_class,
                     prog='./wisski2rdfproxy.py',
                     description='Generate rdfproxy models and queries from WissKI pathbuilder specifications',
@@ -114,10 +114,10 @@ class Field:
     if isinstance(self.type, Type):
       f = self.prepare_clone(prefix)
       if '*' in exclude:
-        # f.type.fields = []
-        # f.datatype_property = f.type.paths[-1] # FIXME this isn't right
-        f.type = wisski_type_map['uri']
-        f.datatype_property = 'TODO'
+        logger.debug('all fields of this should be excluded')
+        f.type.fields = []
+        # f.type = wisski_type_map['uri']
+        # f.datatype_property = None
         return f
       try:
         f.type = f.type.clone_exclude(exclude, f.prefix)
@@ -157,15 +157,12 @@ At the very minimum, you probably want to exclude the following path from the en
 
     raise RuntimeError(f"recursive embedding in endpoint \"{prefix[0]}\" (unable to locate it, recursion step > 50 ?")
 
-  def short_var(self):
-    return ''.join(w[0] for w in self.clean_id().split(' ') if len(w))
-
   def anchor(self):
     return f'?{self.name}'
 
-  def bindings(self):
+  def bindings(self, anchor_var = None):
     if isinstance(self.type, Type):
-      return self.type.bindings(self.anchor())
+      return self.type.bindings(anchor_var or self.anchor())
     else:
       return []
 
@@ -199,6 +196,9 @@ class Type:
   def classname(self):
     return '_'.join(map(lambda el: el.replace('_', ' ').title().replace(' ', ''), [self.id] if self.prefix == [] else self.prefix))
 
+  def short_var(self):
+    return ''.join(w[0] for w in self.id.split('_') if len(w))
+
   # def clean_name(self):
     # self.cleanname = self.name.lower().translate({ord(i): None for i in '*()/_'}).strip()
   # def binding_name(self):
@@ -208,31 +208,32 @@ class Type:
     return [ anchor_var ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
 
   def bindings(self, anchor_var):
+    # logger.debug(f'binding {self.id} around {anchor_var}')
     # FIXME what if it's a multi-step from the parent to this?
     bindings = [f'{anchor_var} a {self.paths[-1]}.']
     for f in self.fields:
       if isinstance(f.type, Type):
-        prevvarname = f.anchor()
+        prevvarname = anchor_var
         fieldbindings = []
         for i in range(int((len(f.paths)) / 2)):
-          nextvarname = f.anchor() if 2*(i+1)+1 == len(f.paths) else f'?{self.short_var()}_{"_" * i}{f.short_var()}'
+          nextvarname = f.anchor() if 2*(i+1)+1 == len(f.paths) else f'?{self.short_var()}_{"_" * i}{f.type.short_var()}'
           p = f.paths[2*i + 1]
           fieldbindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
           prevvarname = nextvarname
-      else:
-        fieldbindings = [f'{anchor_var} {f.datatype_property} {f.anchor()}.' ]
-        # FIXME need to include path, not just datatype_property?
-        # try:
-          # fieldbindings.append(f'{prevvarname} {f.property} {f.anchor()}.')
-        # except AttributeError:
-          # logger.warning(f'failed to bind {f.id} in {self.id}')
-          # pass
+        fieldbindings = fieldbindings + f.bindings(prevvarname)
 
-      if f.cardinality == 1:
-        bindings.append('\n'.join(fieldbindings))
+      # elif f.datatype_property == None:
+        # this used to be a real type but now it's just an entity reference, all good
+        # continue
       else:
-        bindings.extend(['OPTIONAL {', *[ f'{args.indent}{b}' for b in fieldbindings ], '}'])
-    return [ f'{args.indent}{b}' for b in bindings ]
+        # logger.debug(f'field {f} is a {f.datatype_property}')
+        # FIXME need to include path, not just datatype_property?
+        fieldbindings = [f'{anchor_var} {f.datatype_property} {f.anchor()}.' ]
+
+      if f.cardinality == -1:
+        fieldbindings = [ 'OPTIONAL { ', *fieldbindings, '}' ]
+      bindings.extend([''] + [ f'{args.indent}{b}' for b in fieldbindings ])
+    return bindings
 
   # internal helper fn
   def prepare_clone(self, ls, prefix):
@@ -243,12 +244,12 @@ class Type:
     split = parse_filter_list(ls)
     for key in split:
       if key == '*':
-        logger.info(f'found * in prepare clone of type {c}')
+        logger.warning(f'found * in prepare clone of type {c}')
         continue
       exists = False
       for f in c.fields:
         if f.name == key:
-          logger.debug(f'found {key} in {"field of " + c.id if f.name == key else "entity reference"}')
+          logger.debug(f'found {key} in field of {c.id}')
           exists = True
           break
       if not exists:
@@ -283,6 +284,7 @@ class Type:
     return f'''class {self.classname()}(BaseModel):
 {args.indent}class Config:
 {2*args.indent}title = "{self.name}"
+{2*args.indent}original_path_id = "{self.id}"
 ''' + ('\n'.join(f'{args.indent}{f}' for f in self.fields) + '\n')
 # {2*args.indent}rdfproxy_anchor = "?{self.id}"
 
@@ -338,7 +340,7 @@ try:
       entity_type = p.paths[-1]
       try:
         p.type = root_types[entity_type]
-        logger.debug(f'resolved field {p.name} from rdf class "{entity_type}" to model type "{p.type}"')
+        logger.debug(f'resolved entity_reference field {p.name} from rdf class "{entity_type}" to model type "{p.type}"')
       except KeyError:
         logger.warning(f"field {p.name} is an entity reference, but couldn't find a model for the last element of its path ({entity_type})")
         p.type = None
@@ -382,7 +384,7 @@ try:
         rq.write("\n".join(t.bindings()))
         rq.write('\n}\n\n')
 
-    logger.info(f'Wrote endpoint "{name}" which consists of {len(required_types)} nested model class(es)')
+    logger.info(f'Generated endpoint "{name}", consisting of {len(required_types)} nested model class(es)')
 
   endpoints = { n: paths[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields } | { n: paths[n].clone_include(fields) for n, *fields in args.endpoint_include_fields }
 
