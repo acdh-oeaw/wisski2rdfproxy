@@ -35,26 +35,25 @@ Endpoint/model options:
   If no endpoints are given, lists all available types without generating any endpoints.
 
   -ee path_id [exclude_field ...], --endpoint_exclude_fields path_id [exclude_field ...]
-                        a path id for which to generate an endpoint, followed by 0
-                        or more field paths that should be excluded from the
-                        endpoint return value. any fields not in this list will be
-                        included by default.
+                        a path id for which to generate an endpoint, followed by 0 or
+                        more field paths that should be excluded from the endpoint
+                        return value. any fields not in this list will be included by
+                        default.
   -ei path_id [include_field ...], --endpoint_include_fields path_id [include_field ...]
-                        a path id for which to generate an endpoint, followed by 1
-                        or more field paths that should be included in the
-                        endpoint return value.
+                        a path id for which to generate an endpoint, followed by 1 or
+                        more field paths that should be included in the endpoint
+                        return value.
 
 Output options:
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
-                        file prefix for the python model and SPARQL query fields
-                        that will be generated for each endpoint (default: print
-                        both to stdout)
+                        file prefix for the python model and SPARQL query fields that
+                        will be generated for each endpoint (default: print both to
+                        stdout)
   -r [AUTO_LIMIT_MODEL_RECURSION], --auto-limit-model-recursion [AUTO_LIMIT_MODEL_RECURSION]
                         NOT IMPLEMENTED YET: automatically limit recursive model
                         embeddings to this many levels (off by default)
   -i INDENT, --indent INDENT
-                        indentation to use for the python models (default: 4
-                        spaces)
+                        indentation to use for the python models (default: 4 spaces)
   -ns prefix full_url, --namespace prefix full_url
                         namespace replacements to carry out, use a -ns for every
                         prefix specification (default: [['crm', 'http://www.cidoc-
@@ -83,6 +82,4 @@ example usage:
 
   # generate two endpoints
   ./wisski2rdfproxy.py -j wisski-pathbuilder-export.json -ee person foo
-
-  If no -endpoint_s are specified, generates full endpoints for all model classes by default.
 ```

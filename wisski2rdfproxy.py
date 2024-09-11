@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 sys.setrecursionlimit(100)
 
-formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(prog, width=min(int(getenv('COLUMNS', 82)), 82))
+formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(prog, width=min(int(getenv('COLUMNS', 85)), 85))
 parser = argparse.ArgumentParser(formatter_class=formatter_class,
                     prog='./wisski2rdfproxy.py',
                     description='Generate rdfproxy models and queries from WissKI pathbuilder specifications',
@@ -35,9 +35,7 @@ parser = argparse.ArgumentParser(formatter_class=formatter_class,
                           %(prog)s -j wisski-pathbuilder-export.json -ee person foo
 
                           # generate two endpoints
-                          %(prog)s -j wisski-pathbuilder-export.json -ee person foo
-
-                          If no -endpoint_s are specified, generates full endpoints for all model classes by default.'''))
+                          %(prog)s -j wisski-pathbuilder-export.json -ee person foo'''))
 parser.add_argument('-v', '--verbose', action='count', default=0, help='Increase the verbosity of the logging output: default is WARNING, use -v for INFO, -vv for DEBUG')
 
 i = parser.add_argument_group('WissKI pathbuilder input (exactly one is required)')
@@ -86,6 +84,7 @@ class Field:
     self.cardinality = int(path.find('cardinality').text)
     tp = path.find('fieldtype').text
 
+    self.datatype_property = None
     if tp in wisski_type_map:
       self.type = wisski_type_map[tp] # TODO throw error if type is not implemented yet
       self.datatype_property = process_path(path.find('datatype_property').text)
@@ -115,9 +114,9 @@ class Field:
       f = self.prepare_clone(prefix)
       if '*' in exclude:
         logger.debug('all fields of this should be excluded')
-        f.type.fields = []
-        # f.type = wisski_type_map['uri']
-        # f.datatype_property = None
+        # f.type.fields = []
+        f.type = wisski_type_map['uri']
+        f.datatype_property = None
         return f
       try:
         f.type = f.type.clone_exclude(exclude, f.prefix)
@@ -160,17 +159,36 @@ At the very minimum, you probably want to exclude the following path from the en
   def anchor(self):
     return f'?{self.name}'
 
-  def bindings(self, anchor_var = None):
-    if isinstance(self.type, Type):
-      return self.type.bindings(anchor_var or self.anchor())
-    else:
-      return []
-
   def select(self):
     if isinstance(self.type, Type):
       return self.type.select(self.anchor())
     else:
       return [ self.anchor() ]
+
+  def bindings(self, anchor_var = None):
+    logger.debug(f'bindings for field {self.name} (anchor {anchor_var})')
+    var = anchor_var or self.anchor()
+
+    bindings = []
+    prevvarname = var
+    for i in range(int((len(self.paths)) / 2)):
+      # FIXME final var name is wrong
+      nextvarname = self.anchor() if 2*(i+1)+1 == len(self.paths) else f'{anchor_var}_{"_" * i}{self.short_var()}'
+      p = self.paths[2*i + 1]
+      bindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
+      prevvarname = nextvarname
+    if isinstance(self.type, Type):
+      bindings.extend(self.type.bindings(var))
+    elif self.datatype_property != None:
+      bindings.append(f'{var} {self.datatype_property} {self.anchor()}.') # TODO might need unique var name?
+
+    if self.cardinality == 1 or anchor_var == None: # ignore cardinality if this is the root field
+      return bindings
+    else:
+      return [ 'OPTIONAL { ', *bindings, '}' ]
+
+  def short_var(self):
+    return ''.join(w[0] for w in self.name.split('_') if len(w))
 
   def __str__(self):
     if self.cardinality == 1:
@@ -196,43 +214,19 @@ class Type:
   def classname(self):
     return '_'.join(map(lambda el: el.replace('_', ' ').title().replace(' ', ''), [self.id] if self.prefix == [] else self.prefix))
 
-  def short_var(self):
-    return ''.join(w[0] for w in self.id.split('_') if len(w))
-
   # def clean_name(self):
     # self.cleanname = self.name.lower().translate({ord(i): None for i in '*()/_'}).strip()
   # def binding_name(self):
     # return self.clean_id().replace(' ', '')
 
-  def select(self, anchor_var):
-    return [ anchor_var ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
+  def select(self, anchor_var, include_anchor = True):
+    return ([ anchor_var ] if include_anchor else []) + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
 
   def bindings(self, anchor_var):
-    # logger.debug(f'binding {self.id} around {anchor_var}')
-    # FIXME what if it's a multi-step from the parent to this?
+    logger.debug(f'bindings for type {self.id} (anchor {anchor_var})')
     bindings = [f'{anchor_var} a {self.paths[-1]}.']
     for f in self.fields:
-      if isinstance(f.type, Type):
-        prevvarname = anchor_var
-        fieldbindings = []
-        for i in range(int((len(f.paths)) / 2)):
-          nextvarname = f.anchor() if 2*(i+1)+1 == len(f.paths) else f'?{self.short_var()}_{"_" * i}{f.type.short_var()}'
-          p = f.paths[2*i + 1]
-          fieldbindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
-          prevvarname = nextvarname
-        fieldbindings = fieldbindings + f.bindings(prevvarname)
-
-      # elif f.datatype_property == None:
-        # this used to be a real type but now it's just an entity reference, all good
-        # continue
-      else:
-        # logger.debug(f'field {f} is a {f.datatype_property}')
-        # FIXME need to include path, not just datatype_property?
-        fieldbindings = [f'{anchor_var} {f.datatype_property} {f.anchor()}.' ]
-
-      if f.cardinality == -1:
-        fieldbindings = [ 'OPTIONAL { ', *fieldbindings, '}' ]
-      bindings.extend([''] + [ f'{args.indent}{b}' for b in fieldbindings ])
+      bindings.extend([''] + [ f'{args.indent}{b}' for b in f.bindings(anchor_var) ])
     return bindings
 
   # internal helper fn

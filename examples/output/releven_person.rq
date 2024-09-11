@@ -31,33 +31,35 @@ WHERE {
 
     OPTIONAL { 
     ?person_id_assignment crm:P140_assigned_attribute_to ?person.
-    ?person_id_assignment a crm:E15_Identifier_Assignment.
+    ?person a crm:E15_Identifier_Assignment.
     
-        ?pia_ea crm:P140_assigned_attribute_to ?person_id_assignment.
-        ?pia_ea crm:P14_carried_out_by ?person_identifier_by.
-        ?person_identifier_by a lrmoo:F11_Corporate_Body.
+        ?person_pib crm:P140_assigned_attribute_to ?person.
+        ?person_pib crm:P14_carried_out_by ?person_identifier_by.
+        ?person a lrmoo:F11_Corporate_Body.
         
-            ?person_identifier_by crm:P1_is_identified_by ?external_authority_display_name.
+            ?person crm:P1_is_identified_by ?external_authority_display_name.
         
-            ?person_identifier_by skos:exactMatch ?external_authority_url.
+            ?person skos:exactMatch ?external_authority_url.
     
-        ?pia_pi crm:P140_assigned_attribute_to ?person_id_assignment.
-        ?pia_pi crm:P37_assigned ?person_identifier.
-        ?person_identifier a crm:E42_Identifier.
+        ?person_pi crm:P140_assigned_attribute_to ?person.
+        ?person_pi crm:P37_assigned ?person_identifier.
+        ?person a crm:E42_Identifier.
         
-            ?person_identifier crm:P3_has_note ?person_identifier_is.
+            ?person_pii crm:P140_assigned_attribute_to ?person.
+            ?person_pii crm:P37_assigned ?person_identifier_is.
+            ?person crm:P3_has_note ?person_identifier_is.
         
-            ?person_identifier crm:P190_has_symbolic_content ?person_identifier_plain.
+            ?person_pip crm:P140_assigned_attribute_to ?person.
+            ?person_pip crm:P37_assigned ?person_identifier_plain.
+            ?person crm:P190_has_symbolic_content ?person_identifier_plain.
     }
 
     OPTIONAL { 
     ?person_gender_assertion crm:P141_assigned ?person.
-    ?person_gender_assertion a star:E13_crm_P41.
     }
 
     OPTIONAL { 
     ?person_ethnicity_assertion crm:P141_assigned ?person.
-    ?person_ethnicity_assertion a star:E13_crm_P107.
     }
 
     OPTIONAL { 
@@ -66,38 +68,30 @@ WHERE {
 
     OPTIONAL { 
     ?person_possession_assertion crm:P141_assigned ?person.
-    ?person_possession_assertion a star:E13_crm_P51.
     }
 
     OPTIONAL { 
     ?person_status_assertion crm:P141_assigned ?person.
-    ?person_status_assertion a star:E13_sdhss_P26.
     }
 
     OPTIONAL { 
     ?person_religion_assertion crm:P141_assigned ?person.
-    ?person_religion_assertion a star:E13_sdhss_P36.
     }
 
     OPTIONAL { 
     ?person_occupation_assertion crm:P141_assigned ?person.
-    ?person_occupation_assertion a star:E13_sdhss_P13.
     }
 
     OPTIONAL { 
     ?person_language_assertion crm:P140_assigned_attribute_to ?person.
-    ?person_language_assertion a star:E13_sdhss_P38.
     }
 
     OPTIONAL { 
     ?person_kinship_assertion crm:P141_assigned ?person.
-    ?person_kinship_assertion a star:E13_sdhss_P17.
     }
 
     ?birth_circumstances_claim crm:P141_assigned ?person.
-    ?birth_circumstances_claim a star:E13_crm_P98.
 
     ?person_death_assertion crm:P141_assigned ?person.
-    ?person_death_assertion a star:E13_crm_P100.
 }
 
