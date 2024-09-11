@@ -77,6 +77,7 @@ class Field:
   """
   def __init__(self, path):
     self.name = path.find('id').text
+    # self.prefix = [] # only required when cloning
     self.paths  = [process_path(el.text) for el in path.find('path_array')]
     self.group = path.find('group_id').text
     if self.group == '0':
@@ -104,14 +105,14 @@ class Field:
     return collection
 
   def prepare_clone(self, prefix):
-    logger.debug(f'cloning field {self.name} (type {self.type})')
+    logger.debug(f'cloning field {self.name} (type {self.type}) with field prefix {prefix}')
     f = copy.copy(self)
     f.prefix = prefix + [self.name]
     return f
 
   def clone_exclude(self, exclude, prefix=[]):
+    f = self.prepare_clone(prefix)
     if isinstance(self.type, Type):
-      f = self.prepare_clone(prefix)
       if '*' in exclude:
         logger.debug('all fields of this should be excluded')
         # f.type.fields = []
@@ -123,17 +124,13 @@ class Field:
       except RecursionError:
         # TODO if args.auto_fix_recursive_embeddings:
         self.handle_recursion(prefix)
-      return f
-    else:
-      return self # no need to clone?
+    return f
 
   def clone_include(self, include, prefix=[]):
+    f = self.prepare_clone(prefix)
     if isinstance(self.type, Type):
-      f = self.prepare_clone(prefix)
-      # TODO implement
-      return f
-    else:
-      return self # no need to clone?
+      pass # TODO implement
+    return f
 
   def handle_recursion(self, prefix):
     # try to find recursion pattern -- identical adjacent sequences of path ids
@@ -157,30 +154,37 @@ At the very minimum, you probably want to exclude the following path from the en
     raise RuntimeError(f"recursive embedding in endpoint \"{prefix[0]}\" (unable to locate it, recursion step > 50 ?")
 
   def anchor(self):
-    return f'?{self.name}'
+    return f'?{self.name}ROOT' if self.prefix == [] else f'?{"__".join(self.prefix)}'
 
   def select(self):
+    logger.debug(f'field select of {self.name} is {self.anchor()} (at {self.prefix})')
     if isinstance(self.type, Type):
       return self.type.select(self.anchor())
     else:
       return [ self.anchor() ]
 
   def bindings(self, anchor_var = None):
-    logger.debug(f'bindings for field {self.name} (anchor {anchor_var})')
+    logger.debug(f'bindings for field {self.name} (anchor {anchor_var}) {self.prefix}')
     var = anchor_var or self.anchor()
 
     bindings = []
     prevvarname = var
-    for i in range(int((len(self.paths)) / 2)):
-      # FIXME final var name is wrong
-      nextvarname = self.anchor() if 2*(i+1)+1 == len(self.paths) else f'{anchor_var}_{"_" * i}{self.short_var()}'
-      p = self.paths[2*i + 1]
+    fullpath = self.paths if self.datatype_property == None else self.paths + [self.datatype_property]
+    # for i in range(int((len(self.paths)) / 2)):
+    nsteps = int(len(fullpath) / 2)
+    for i in range(nsteps):
+      nextvarname = self.anchor() if i == nsteps-1 else f'{prevvarname}___{self.short_var()}'
+      p = fullpath[2*i + 1]
       bindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
       prevvarname = nextvarname
+
     if isinstance(self.type, Type):
-      bindings.extend(self.type.bindings(var))
-    elif self.datatype_property != None:
-      bindings.append(f'{var} {self.datatype_property} {self.anchor()}.') # TODO might need unique var name?
+      bindings = bindings + self.type.bindings(prevvarname)
+
+    # if self.datatype_property != None:
+      # bindings.append(f'{prevvarname} {self.datatype_property} {self.anchor()}.')
+    if self.datatype_property == None:
+      bindings = [f'{prevvarname} a {self.paths[-1]}.'] + bindings
 
     if self.cardinality == 1 or anchor_var == None: # ignore cardinality if this is the root field
       return bindings
@@ -214,29 +218,24 @@ class Type:
   def classname(self):
     return '_'.join(map(lambda el: el.replace('_', ' ').title().replace(' ', ''), [self.id] if self.prefix == [] else self.prefix))
 
-  # def clean_name(self):
-    # self.cleanname = self.name.lower().translate({ord(i): None for i in '*()/_'}).strip()
-  # def binding_name(self):
-    # return self.clean_id().replace(' ', '')
-
-  def select(self, anchor_var, include_anchor = True):
-    return ([ anchor_var ] if include_anchor else []) + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
+  def select(self, anchor_var):
+    return [ f'##{anchor_var}' ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
 
   def bindings(self, anchor_var):
     logger.debug(f'bindings for type {self.id} (anchor {anchor_var})')
-    bindings = [f'{anchor_var} a {self.paths[-1]}.']
+    bindings = []
     for f in self.fields:
       bindings.extend([''] + [ f'{args.indent}{b}' for b in f.bindings(anchor_var) ])
     return bindings
 
   # internal helper fn
   def prepare_clone(self, ls, prefix):
-    logger.debug(f'cloning type {self}')
-    # c = copy.copy(self.type if isinstance(self.type, Type) else self)
     c = copy.copy(self)
-    c.prefix = prefix
+    c.prefix = prefix #+ [self.id]
+    logger.debug(f'cloning type {self} with type prefix {c.prefix}')
     split = parse_filter_list(ls)
     for key in split:
+      logger.debug(f'field list at {".".join(prefix)}.{key}: {split}')
       if key == '*':
         logger.warning(f'found * in prepare clone of type {c}')
         continue
@@ -248,7 +247,6 @@ class Type:
           break
       if not exists:
         logger.warning(f'unknown field specified in include/exclude list: {".".join(prefix[1:])}  {key}')
-      logger.debug(f'field list at {".".join(prefix)}.{key}: {split}')
     return (c, split)
 
 

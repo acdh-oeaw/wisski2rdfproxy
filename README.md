@@ -4,13 +4,16 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 
 ### TODOs / missing implementation
 
+- [ ] assure that binding variable names within queries are actually unique
 - [ ] implement auto-limiting of recursive embeddings
 - [ ] `--endpoint_include_fields` is essentially untested
+- [ ] if there is a partial match for an entity in the triple store which is missing some mandatory field, that partial entity will (erroneously) show up in any endpoint which excludes the mandatory field
+- [ ] if there is a redundant more specific exclude, the broader exclude is currently disregarded without any warning
 
 ### Usage
 
 1. export pathbuilder json or xml (through [web interface](https://wiss-ki.eu/documentation/pathbuilder/export-import-pathbuilder) or [WissKI API](https://github.com/kaiamann/wisski_api))
-2. run ./wisski2rdfproxy.py
+2. run `./wisski2rdfproxy.py`
 
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
