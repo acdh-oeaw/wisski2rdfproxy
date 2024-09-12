@@ -7,13 +7,14 @@ PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
 SELECT
 ##?person
-    ##?person__person_id_assignment
-        ##?person__person_id_assignment__person_identifier_by
-            ?person__person_id_assignment__person_identifier_by__external_authority_display_name
-            ?person__person_id_assignment__person_identifier_by__external_authority_url
-        ##?person__person_id_assignment__person_identifier
-            ?person__person_id_assignment__person_identifier__person_identifier_is
-            ?person__person_id_assignment__person_identifier__person_identifier_plain
+    ?person__person_id_assignment
+    ##?person__person_appellation_assertion
+        ##?person__person_appellation_assertion__person_appellation_source
+            ?person__person_appellation_assertion__person_appellation_source__source_publication
+            ?person__person_appellation_assertion__person_appellation_source__source_seal
+            ?person__person_appellation_assertion__person_appellation_source__source_reference
+            ?person__person_appellation_assertion__person_appellation_source__source_content
+        ?person__person_appellation_assertion__person_appellation_is
     ?person__person_gender_assertion
     ?person__person_ethnicity_assertion
     ?person__person_descriptive_name
@@ -23,19 +24,8 @@ SELECT
     ?person__person_occupation_assertion
     ?person__person_language_assertion
     ?person__person_kinship_assertion
-    ##?person__birth_circumstances_claim
-        ##?person__birth_circumstances_claim__birth_event
-            ##?person__birth_circumstances_claim__birth_event__description_of_birth
-                ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_is
-                ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_source
-                ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_by
-            ##?person__birth_circumstances_claim__birth_event__birth_temporal_assertion
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion__birth_timespan_is
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion__birth_timespan_source
-    ##?person__person_death_assertion
-        ##?person__person_death_assertion__person_death
-            ?person__person_death_assertion__person_death__death_description_assertion
-            ?person__person_death_assertion__person_death__death_temporal_assertion
+    ?person__birth_circumstances_claim
+    ?person__person_death_assertion
 
 WHERE {
 ?person a crm:E21_Person.
@@ -43,26 +33,31 @@ WHERE {
     OPTIONAL { 
     ?person__person_id_assignment a crm:E15_Identifier_Assignment.
     ?person__person_id_assignment crm:P140_assigned_attribute_to ?person.
+    }
+
+    OPTIONAL { 
+    ?person__person_appellation_assertion a star:E13_crm_P1.
+    ?person__person_appellation_assertion crm:P140_assigned_attribute_to ?person.
     
-        ?person__person_id_assignment__person_identifier_by a lrmoo:F11_Corporate_Body.
-        ?person__person_id_assignment___pib crm:P140_assigned_attribute_to ?person__person_id_assignment.
-        ?person__person_id_assignment___pib crm:P14_carried_out_by ?person__person_id_assignment__person_identifier_by.
+        ?person__person_appellation_assertion__person_appellation_source a crm:E73_Information_Object.
+        ?person__person_appellation_assertion___pas crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
+        ?person__person_appellation_assertion___pas crm:P17_was_motivated_by ?person__person_appellation_assertion__person_appellation_source.
         
-            ?person__person_id_assignment__person_identifier_by crm:P1_is_identified_by ?person__person_id_assignment__person_identifier_by__external_authority_display_name.
+            ?person__person_appellation_assertion__person_appellation_source__source_publication a r11:Publication.
+            ?person__person_appellation_assertion__person_appellation_source___sp crm:P141_assigned ?person__person_appellation_assertion__person_appellation_source.
+            ?person__person_appellation_assertion__person_appellation_source___sp crm:P140_assigned_attribute_to ?person__person_appellation_assertion__person_appellation_source__source_publication.
         
-            ?person__person_id_assignment__person_identifier_by skos:exactMatch ?person__person_id_assignment__person_identifier_by__external_authority_url.
+            ?person__person_appellation_assertion__person_appellation_source__source_seal a r11:Boulloterion.
+            ?person__person_appellation_assertion__person_appellation_source___ss crm:P141_assigned ?person__person_appellation_assertion__person_appellation_source.
+            ?person__person_appellation_assertion__person_appellation_source___ss crm:P140_assigned_attribute_to ?person__person_appellation_assertion__person_appellation_source__source_seal.
+        
+            ?person__person_appellation_assertion__person_appellation_source crm:P3_has_note ?person__person_appellation_assertion__person_appellation_source__source_reference.
+        
+            ?person__person_appellation_assertion__person_appellation_source crm:P190_has_symbolic_content ?person__person_appellation_assertion__person_appellation_source__source_content.
     
-        ?person__person_id_assignment__person_identifier a crm:E42_Identifier.
-        ?person__person_id_assignment___pi crm:P140_assigned_attribute_to ?person__person_id_assignment.
-        ?person__person_id_assignment___pi crm:P37_assigned ?person__person_id_assignment__person_identifier.
-        
-            ?person__person_id_assignment__person_identifier___pii crm:P140_assigned_attribute_to ?person__person_id_assignment__person_identifier.
-            ?person__person_id_assignment__person_identifier___pii crm:P37_assigned ?person__person_id_assignment__person_identifier___pii___pii.
-            ?person__person_id_assignment__person_identifier___pii___pii crm:P3_has_note ?person__person_id_assignment__person_identifier__person_identifier_is.
-        
-            ?person__person_id_assignment__person_identifier___pip crm:P140_assigned_attribute_to ?person__person_id_assignment__person_identifier.
-            ?person__person_id_assignment__person_identifier___pip crm:P37_assigned ?person__person_id_assignment__person_identifier___pip___pip.
-            ?person__person_id_assignment__person_identifier___pip___pip crm:P190_has_symbolic_content ?person__person_id_assignment__person_identifier__person_identifier_plain.
+        ?person__person_appellation_assertion___pai crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
+        ?person__person_appellation_assertion___pai crm:P141_assigned ?person__person_appellation_assertion___pai___pai.
+        ?person__person_appellation_assertion___pai___pai crm:P190_has_symbolic_content ?person__person_appellation_assertion__person_appellation_is.
     }
 
     OPTIONAL { 
@@ -111,73 +106,8 @@ WHERE {
 
     ?person__birth_circumstances_claim a star:E13_crm_P98.
     ?person__birth_circumstances_claim crm:P141_assigned ?person.
-    
-        ?person__birth_circumstances_claim__birth_event a crm:E67_Birth.
-        ?person__birth_circumstances_claim___be crm:P141_assigned ?person__birth_circumstances_claim.
-        ?person__birth_circumstances_claim___be crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event.
-        
-            OPTIONAL { 
-            ?person__birth_circumstances_claim__birth_event__description_of_birth a star:E13_crm_P3.
-            ?person__birth_circumstances_claim__birth_event___dob crm:P141_assigned ?person__birth_circumstances_claim__birth_event.
-            ?person__birth_circumstances_claim__birth_event___dob crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event___dob___dob.
-            ?person__birth_circumstances_claim__birth_event__description_of_birth crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event___dob___dob.
-            
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdi crm:P141_assigned ?person__birth_circumstances_claim__birth_event__description_of_birth.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdi crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__description_of_birth___bdi___bdi.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdi___bdi___bdi crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__description_of_birth___bdi___bdi.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdi___bdi___bdi crm:P141_assigned ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_is.
-            
-                ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_source a crm:E73_Information_Object.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bds crm:P141_assigned ?person__birth_circumstances_claim__birth_event__description_of_birth.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bds crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__description_of_birth___bds___bds.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bds___bds___bds crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__description_of_birth___bds___bds.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bds___bds___bds crm:P17_was_motivated_by ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_source.
-            
-                ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_by a crm:E21_Person.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdb crm:P141_assigned ?person__birth_circumstances_claim__birth_event__description_of_birth.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdb crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__description_of_birth___bdb___bdb.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdb___bdb___bdb crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__description_of_birth___bdb___bdb.
-                ?person__birth_circumstances_claim__birth_event__description_of_birth___bdb___bdb___bdb crm:P14_carried_out_by ?person__birth_circumstances_claim__birth_event__description_of_birth__birth_description_by.
-            }
-        
-            OPTIONAL { 
-            ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion a star:E13_crm_P4.
-            ?person__birth_circumstances_claim__birth_event___bta crm:P141_assigned ?person__birth_circumstances_claim__birth_event.
-            ?person__birth_circumstances_claim__birth_event___bta crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event___bta___bta.
-            ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event___bta___bta.
-            
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti crm:P141_assigned ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti___bti.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti___bti___bti crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti___bti.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti___bti___bti crm:P141_assigned ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti___bti___bti___bti.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bti___bti___bti___bti crm:P3_has_note ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion__birth_timespan_is.
-            
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion__birth_timespan_source a crm:E73_Information_Object.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bts crm:P141_assigned ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bts crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bts___bts.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bts___bts___bts crm:P140_assigned_attribute_to ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bts___bts.
-                ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion___bts___bts___bts crm:P17_was_motivated_by ?person__birth_circumstances_claim__birth_event__birth_temporal_assertion__birth_timespan_source.
-            }
 
     ?person__person_death_assertion a star:E13_crm_P100.
     ?person__person_death_assertion crm:P141_assigned ?person.
-    
-        ?person__person_death_assertion__person_death a crm:E69_Death.
-        ?person__person_death_assertion___pd crm:P141_assigned ?person__person_death_assertion.
-        ?person__person_death_assertion___pd crm:P140_assigned_attribute_to ?person__person_death_assertion__person_death.
-        
-            OPTIONAL { 
-            ?person__person_death_assertion__person_death__death_description_assertion a star:E13_crm_P3.
-            ?person__person_death_assertion__person_death___dda crm:P141_assigned ?person__person_death_assertion__person_death.
-            ?person__person_death_assertion__person_death___dda crm:P140_assigned_attribute_to ?person__person_death_assertion__person_death___dda___dda.
-            ?person__person_death_assertion__person_death__death_description_assertion crm:P140_assigned_attribute_to ?person__person_death_assertion__person_death___dda___dda.
-            }
-        
-            OPTIONAL { 
-            ?person__person_death_assertion__person_death__death_temporal_assertion a star:E13_crm_P4.
-            ?person__person_death_assertion__person_death___dta crm:P141_assigned ?person__person_death_assertion__person_death.
-            ?person__person_death_assertion__person_death___dta crm:P140_assigned_attribute_to ?person__person_death_assertion__person_death___dta___dta.
-            ?person__person_death_assertion__person_death__death_temporal_assertion crm:P140_assigned_attribute_to ?person__person_death_assertion__person_death___dta___dta.
-            }
 }
 

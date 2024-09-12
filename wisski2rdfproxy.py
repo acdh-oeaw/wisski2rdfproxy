@@ -23,6 +23,15 @@ parser = argparse.ArgumentParser(formatter_class=formatter_class,
                           TODO document syntax, how to use for stubs etc
                           -ee endpointname some.model.path.somefield some.model.path.otherfield.*
 
+                          # exclude all children of that field
+                          -ee endpointname field.*
+
+                          # include all direct children of that field
+                          -ei endpointname field.*
+
+                          # include ALL (direct and indirect) children of that field, i.e. that entire sub-tree
+                          -ei endpointname field.**
+
                         example usage:
 
                           # generate all endpoints
@@ -44,8 +53,8 @@ i.add_argument('-j', '--json', metavar='wisski_api_export', type=argparse.FileTy
 i.add_argument('-x', '--xml', metavar='wisski_path_xml', type=argparse.FileType('r'), help='')
 
 i = parser.add_argument_group('Endpoint/model options', 'specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).\nIf no endpoints are given, lists all available types without generating any endpoints.')
-i.add_argument('-ee', '--endpoint_exclude_fields', nargs='+', metavar=('path_id', 'exclude_field'), action='append', help='a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.', default=[])
-i.add_argument('-ei', '--endpoint_include_fields', nargs='+', metavar=('path_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
+i.add_argument('-ee', '--endpoint-exclude-fields', nargs='+', metavar=('path_id', 'exclude_field'), action='append', help='a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.', default=[])
+i.add_argument('-ei', '--endpoint-include-fields', nargs='+', metavar=('path_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
 
 i = parser.add_argument_group('Output options')
 i.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
@@ -115,7 +124,6 @@ class Field:
     if isinstance(self.type, Type):
       if '*' in exclude:
         logger.debug('all fields of this should be excluded')
-        # f.type.fields = []
         f.type = wisski_type_map['uri']
         f.datatype_property = None
         return f
@@ -129,7 +137,16 @@ class Field:
   def clone_include(self, include, prefix=[]):
     f = self.prepare_clone(prefix)
     if isinstance(self.type, Type):
-      pass # TODO implement
+      if include == []:
+        logger.debug(f'all fields of {f.name} (and descendants) should be excluded')
+        f.type = wisski_type_map['uri']
+        f.datatype_property = None
+        return f
+      try:
+        f.type = f.type.clone_include(include, f.prefix) # TODO pass '*' down?
+      except RecursionError:
+        # TODO if args.auto_fix_recursive_embeddings:
+        self.handle_recursion(prefix)
     return f
 
   def handle_recursion(self, prefix):
@@ -154,7 +171,7 @@ At the very minimum, you probably want to exclude the following path from the en
     raise RuntimeError(f"recursive embedding in endpoint \"{prefix[0]}\" (unable to locate it, recursion step > 50 ?")
 
   def anchor(self):
-    return f'?{self.name}ROOT' if self.prefix == [] else f'?{"__".join(self.prefix)}'
+    return f'?{"__".join(self.prefix)}'
 
   def select(self):
     logger.debug(f'field select of {self.name} is {self.anchor()} (at {self.prefix})')
@@ -195,10 +212,12 @@ At the very minimum, you probably want to exclude the following path from the en
     return ''.join(w[0] for w in self.name.split('_') if len(w))
 
   def __str__(self):
+    # types are just containers of fields, their anchor variables don't need to be bound explicitly
+    tp = self.type if isinstance(self.type, Type) else f'Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]'
     if self.cardinality == 1:
-      return f'{self.name}: Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]'
+      return f'{self.name}: {tp}'
     else:
-      return f'{self.name}: list[Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]]'
+      return f'{self.name}: list[{tp}]'
 
   def __gt__(self, other):
     return str(self) > str(other)
@@ -235,41 +254,37 @@ class Type:
     logger.debug(f'cloning type {self} with type prefix {c.prefix}')
     split = parse_filter_list(ls)
     for key in split:
-      logger.debug(f'field list at {".".join(prefix)}.{key}: {split}')
-      if key == '*':
-        logger.warning(f'found * in prepare clone of type {c}')
+      if key == '*' or key == '**':
+        if key == '*' and len(c.fields) == 0:
+          logger.warning(f"found '{key}' at {'.'.join(prefix[1:])} even though there are no fields")
+        else:
+          logger.debug(f"clone: found '{key}' in type '{c}'")
         continue
       exists = False
       for f in c.fields:
         if f.name == key:
-          logger.debug(f'found {key} in field of {c.id}')
+          logger.debug(f"clone: found '{key}' in field of '{c.id}'")
           exists = True
           break
       if not exists:
-        logger.warning(f'unknown field specified in include/exclude list: {".".join(prefix[1:])}  {key}')
+        logger.warning(f'unknown field specified in include/exclude list at {".".join(prefix[1:])}: {key}')
     return (c, split)
 
 
   # exclude is a list of "*", "fieldname", "fieldname.subfieldname" or "fieldname.*"
   def clone_exclude(self, exclude, prefix=[]):
     c, excludes = self.prepare_clone(exclude, prefix)
-
     c.fields = [ f.clone_exclude(excludes.get(f.name, []), c.prefix) for f in self.fields if excludes.get(f.name, None) != [] ]
     return c
 
   def clone_include(self, include, prefix=[]):
     c, includes = self.prepare_clone(include, prefix)
-
-    # resolve entity_references -- recursion might happen here!
-    try:
-      if isinstance(c.type, Type):
-        c.type = c.clone_include(include, prefix)
-
-        c.fields = [ f.clone_include(includes.get(f.field_name, []), c.prefix) for f in self.fields if '*' in include or includes.get(f.field_name, None) != [] ]
-        return c
-    except RecursionError:
-      # TODO if args.auto_fix_recursive_embeddings:
-      self.handle_recursion(prefix)
+    logger.debug(f'include {self.id}: {[f.name for f in self.fields]}')
+    if '**' in include:
+      c.fields = [ f.clone_include(['**'], c.prefix) for f in self.fields ]
+    else:
+      c.fields = [ f.clone_include(includes.get(f.name, []), c.prefix) for f in self.fields if '*' in include or f.name in includes ]
+    return c
 
   # return pydantic model definition
   def model(self):
@@ -378,6 +393,10 @@ try:
 
     logger.info(f'Generated endpoint "{name}", consisting of {len(required_types)} nested model class(es)')
 
+  for n, *fields in args.endpoint_include_fields:
+    if len(fields) == 0:
+      print(paths[n])
+      raise Exception(f"endpoint '{n}' is defined using --endpoint-include-fields but is missing any fields to include")
   endpoints = { n: paths[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields } | { n: paths[n].clone_include(fields) for n, *fields in args.endpoint_include_fields }
 
   # write to files or stdout

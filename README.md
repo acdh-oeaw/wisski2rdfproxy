@@ -5,8 +5,8 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 ### TODOs / missing implementation
 
 - [ ] assure that binding variable names within queries are actually unique
+- [ ] add support for limited-level `.*.*[...]` to `--endpoint_include_fields`
 - [ ] implement auto-limiting of recursive embeddings
-- [ ] `--endpoint_include_fields` is essentially untested
 - [ ] if there is a partial match for an entity in the triple store which is missing some mandatory field, that partial entity will (erroneously) show up in any endpoint which excludes the mandatory field
 - [ ] if there is a redundant more specific exclude, the broader exclude is currently disregarded without any warning
 
@@ -37,12 +37,12 @@ Endpoint/model options:
   specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).
   If no endpoints are given, lists all available types without generating any endpoints.
 
-  -ee path_id [exclude_field ...], --endpoint_exclude_fields path_id [exclude_field ...]
+  -ee path_id [exclude_field ...], --endpoint-exclude-fields path_id [exclude_field ...]
                         a path id for which to generate an endpoint, followed by 0 or
                         more field paths that should be excluded from the endpoint
                         return value. any fields not in this list will be included by
                         default.
-  -ei path_id [include_field ...], --endpoint_include_fields path_id [include_field ...]
+  -ei path_id [include_field ...], --endpoint-include-fields path_id [include_field ...]
                         a path id for which to generate an endpoint, followed by 1 or
                         more field paths that should be included in the endpoint
                         return value.
@@ -71,6 +71,15 @@ field include/exclude syntax:
 
   TODO document syntax, how to use for stubs etc
   -ee endpointname some.model.path.somefield some.model.path.otherfield.*
+
+  # exclude all children of that field
+  -ee endpointname field.*
+
+  # include all direct children of that field
+  -ei endpointname field.*
+
+  # include ALL (direct and indirect) children of that field, i.e. that entire sub-tree
+  -ei endpointname field.**
 
 example usage:
 
