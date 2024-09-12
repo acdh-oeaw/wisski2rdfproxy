@@ -105,7 +105,9 @@ class Field:
 
   # return a set of this field's type and all its nested types
   # the result set is built up incrementally to avoid recursion
-  def nested_types(self, collection = set()):
+  def nested_types(self, collection = None):
+    if collection == None:
+      collection = set()
     if not isinstance(self.type, Type) or self.type in collection:
       return collection
     collection.add(self.type)
@@ -372,6 +374,7 @@ try:
 
   def write_endpoint(name, t):
     required_types = sorted(t.nested_types())
+    logger.debug(f'endpoint {name} requires the following types: {[t.id for t in required_types]}')
     with open(f'{args.output_prefix}_{name}.py', 'w') if args.output_prefix else nullcontext(sys.stdout) as py:
       with open(f'{args.output_prefix}_{name}.rq', 'w') if args.output_prefix else nullcontext(sys.stdout) as rq:
 

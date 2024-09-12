@@ -1,14 +1,6 @@
 from pydantic import BaseModel, AnyUrl
 from rdfproxy import SPARQLBinding
 
-class ExternalAuthority(BaseModel):
-    class Config:
-        title = "External Authority"
-        original_path_id = "external_authority"
-    external_authority_display_name: Annotated[str, SPARQLBinding("?external_authority__external_authority_display_name")]
-    external_authority_url: Annotated[AnyUrl, SPARQLBinding("?external_authority__external_authority_url")]
-
-
 class Person(BaseModel):
     class Config:
         title = "Person"
@@ -44,20 +36,5 @@ class Person_PersonAppellationAssertion_PersonAppellationSource(BaseModel):
     source_seal: Annotated[AnyUrl, SPARQLBinding("?person__person_appellation_assertion__person_appellation_source__source_seal")]
     source_reference: Annotated[str, SPARQLBinding("?person__person_appellation_assertion__person_appellation_source__source_reference")]
     source_content: Annotated[str, SPARQLBinding("?person__person_appellation_assertion__person_appellation_source__source_content")]
-
-
-class Publication(BaseModel):
-    class Config:
-        title = "Publication"
-        original_path_id = "publication"
-    publication_reference: Annotated[str, SPARQLBinding("?publication__publication_reference")]
-    publication_creation: list[Publication_PublicationCreation]
-
-
-class Publication_PublicationCreation(BaseModel):
-    class Config:
-        title = "Publication creation"
-        original_path_id = "publication_creation"
-    publication_creation_event: Annotated[AnyUrl, SPARQLBinding("?publication__publication_creation__publication_creation_event")]
 
 
