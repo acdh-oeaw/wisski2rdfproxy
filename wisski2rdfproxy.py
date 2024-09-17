@@ -381,7 +381,7 @@ try:
         if py != sys.stdout:
           py.write('from pydantic import BaseModel, AnyUrl\nfrom rdfproxy import SPARQLBinding\n\n')
 
-        for n in required_types:
+        for n in reversed(required_types):
           py.write(n.model())
           py.write('\n\n')
 
