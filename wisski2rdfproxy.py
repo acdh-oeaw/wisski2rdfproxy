@@ -173,14 +173,14 @@ At the very minimum, you probably want to exclude the following path from the en
     raise RuntimeError(f"recursive embedding in endpoint \"{prefix[0]}\" (unable to locate it, recursion step > 50 ?")
 
   def anchor(self):
-    return f'?{"__".join(self.prefix)}'
+    return f'{"__".join(self.prefix)}'
 
   def select(self):
     logger.debug(f'field select of {self.name} is {self.anchor()} (at {self.prefix})')
     if isinstance(self.type, Type):
       return self.type.select(self.anchor())
     else:
-      return [ self.anchor() ]
+      return [ f'?{self.anchor()}' ]
 
   def bindings(self, anchor_var = None):
     logger.debug(f'bindings for field {self.name} (anchor {anchor_var}) {self.prefix}')
@@ -194,7 +194,7 @@ At the very minimum, you probably want to exclude the following path from the en
     for i in range(nsteps):
       nextvarname = self.anchor() if i == nsteps-1 else f'{prevvarname}___{self.short_var()}'
       p = fullpath[2*i + 1]
-      bindings.append(f'{nextvarname} {p[1:]} {prevvarname}.' if p.startswith('^') else f'{prevvarname} {p} {nextvarname}.')
+      bindings.append(f'?{nextvarname} {p[1:]} ?{prevvarname}.' if p.startswith('^') else f'?{prevvarname} {p} ?{nextvarname}.')
       prevvarname = nextvarname
 
     if isinstance(self.type, Type):
@@ -203,7 +203,7 @@ At the very minimum, you probably want to exclude the following path from the en
     # if self.datatype_property != None:
       # bindings.append(f'{prevvarname} {self.datatype_property} {self.anchor()}.')
     if self.datatype_property == None:
-      bindings = [f'{prevvarname} a {self.paths[-1]}.'] + bindings
+      bindings = [f'?{prevvarname} a {self.paths[-1]}.'] + bindings
 
     if self.cardinality == 1 or anchor_var == None: # ignore cardinality if this is the root field
       return bindings
@@ -240,7 +240,7 @@ class Type:
     return '_'.join(map(lambda el: el.replace('_', ' ').title().replace(' ', ''), [self.id] if self.prefix == [] else self.prefix))
 
   def select(self, anchor_var):
-    return [ f'##{anchor_var}' ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
+    return [ f'##?{anchor_var}' ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
 
   def bindings(self, anchor_var):
     logger.debug(f'bindings for type {self.id} (anchor {anchor_var})')
