@@ -7,6 +7,7 @@ import copy
 import json
 import logging
 from os import getenv
+from os.path import basename
 import sys
 import textwrap
 import xml.etree.ElementTree as ET
@@ -58,6 +59,7 @@ i.add_argument('-ei', '--endpoint-include-fields', nargs='+', metavar=('path_id'
 
 i = parser.add_argument_group('Output options')
 i.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
+i.add_argument('-a', '--generate-api', default=True, action='store_true', help='also generate FastAPI routes for all endpoints at the output_prefix location')
 i.add_argument('-r', '--auto-limit-model-recursion', nargs='?', type=int, const=1, help='NOT IMPLEMENTED YET: automatically limit recursive model embeddings to this many levels (off by default)')
 
 i.add_argument('-i', '--indent', default='    ', help='indentation to use for the python models (default: 4 spaces)')
@@ -379,7 +381,7 @@ try:
       with open(f'{args.output_prefix}_{name}.rq', 'w') if args.output_prefix else nullcontext(sys.stdout) as rq:
 
         if py != sys.stdout:
-          py.write('from pydantic import BaseModel, AnyUrl\nfrom rdfproxy import SPARQLBinding\n\n')
+          py.write('from pydantic import BaseModel, AnyUrl\nfrom rdfproxy import SPARQLBinding\nfrom typing import Annotated\n\n')
 
         for n in reversed(required_types):
           py.write(n.model())
@@ -398,13 +400,29 @@ try:
 
   for n, *fields in args.endpoint_include_fields:
     if len(fields) == 0:
-      print(paths[n])
       raise Exception(f"endpoint '{n}' is defined using --endpoint-include-fields but is missing any fields to include")
   endpoints = { n: paths[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields } | { n: paths[n].clone_include(fields) for n, *fields in args.endpoint_include_fields }
 
   # write to files or stdout
   for name, endpoint_types in endpoints.items():
     write_endpoint(name, endpoint_types)
+
+  if args.output_prefix and args.generate_api:
+    with open(f'{args.output_prefix}.py', 'w') as py:
+      py.write('from fastapi import FastAPI\nfrom rdfproxy import Page, SPARQLModelAdapter\n\napp = FastAPI()')
+      for name, root_type in endpoints.items():
+        py.write(f'''\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
+@app.get("/{name}/")
+def {name}():
+  adapter = SPARQLModelAdapter(
+    target="https://graphdb.r11.eu/repositories/RELEVEN",
+    query=open("{basename(args.output_prefix)}_{name}.rq").read(),
+    model={root_type.type.classname()})
+  return adapter.query()
+''')
+      print(f'FastAPI routes written to {args.output_prefix}.py')
+      print('run the following:')
+      print(f'$ fastapi dev {args.output_prefix}.py')
 
   if not args.output_prefix:
     print('\nOutput is informational only, use the -o argument to write the models and queries to file(s)')

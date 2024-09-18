@@ -1,5 +1,6 @@
 from pydantic import BaseModel, AnyUrl
 from rdfproxy import SPARQLBinding
+from typing import Annotated
 
 class Person_PersonAppellationAssertion_PersonAppellationSource(BaseModel):
     class Config:
