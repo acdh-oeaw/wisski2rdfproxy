@@ -59,7 +59,7 @@ i.add_argument('-ei', '--endpoint-include-fields', nargs='+', metavar=('path_id'
 
 i = parser.add_argument_group('Output options')
 i.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
-i.add_argument('-a', '--generate-api', default=True, action='store_true', help='also generate FastAPI routes for all endpoints at the output_prefix location')
+i.add_argument('-a', '--api', metavar='sparql_api_url', default='https://graphdb.r11.eu/repositories/RELEVEN', help='also generate FastAPI routes for all endpoints at the output_prefix location, pointing to the given SPARQL endpoint URL')
 i.add_argument('-r', '--auto-limit-model-recursion', nargs='?', type=int, const=1, help='NOT IMPLEMENTED YET: automatically limit recursive model embeddings to this many levels (off by default)')
 
 i.add_argument('-i', '--indent', default='    ', help='indentation to use for the python models (default: 4 spaces)')
@@ -409,7 +409,7 @@ try:
   for name, endpoint_types in endpoints.items():
     write_endpoint(name, endpoint_types)
 
-  if args.output_prefix and args.generate_api:
+  if args.output_prefix and args.api:
     with open(f'{args.output_prefix}.py', 'w') as py:
       py.write('from fastapi import FastAPI\nfrom rdfproxy import Page, SPARQLModelAdapter\n\napp = FastAPI()')
       for name, root_type in endpoints.items():
@@ -417,7 +417,7 @@ try:
 @app.get("/{name}/")
 def {name}():
   adapter = SPARQLModelAdapter(
-    target="https://graphdb.r11.eu/repositories/RELEVEN",
+    target="{args.api}",
     query=open("{basename(args.output_prefix)}_{name}.rq").read(),
     model={root_type.type.classname()})
   return adapter.query()

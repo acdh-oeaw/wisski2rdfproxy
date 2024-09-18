@@ -18,9 +18,9 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
                             [-ee path_id [exclude_field ...]]
-                            [-ei path_id [include_field ...]] [-o OUTPUT_PREFIX] [-a]
-                            [-r [AUTO_LIMIT_MODEL_RECURSION]] [-i INDENT]
-                            [-ns prefix full_url]
+                            [-ei path_id [include_field ...]] [-o OUTPUT_PREFIX]
+                            [-a sparql_api_url] [-r [AUTO_LIMIT_MODEL_RECURSION]]
+                            [-i INDENT] [-ns prefix full_url]
 
 Generate rdfproxy models and queries from WissKI pathbuilder specifications
 
@@ -52,8 +52,10 @@ Output options:
                         file prefix for the python model and SPARQL query fields that
                         will be generated for each endpoint (default: print both to
                         stdout)
-  -a, --generate-api    also generate FastAPI routes for all endpoints at the
-                        output_prefix location
+  -a sparql_api_url, --api sparql_api_url
+                        also generate FastAPI routes for all endpoints at the
+                        output_prefix location, pointing to the given SPARQL endpoint
+                        URL
   -r [AUTO_LIMIT_MODEL_RECURSION], --auto-limit-model-recursion [AUTO_LIMIT_MODEL_RECURSION]
                         NOT IMPLEMENTED YET: automatically limit recursive model
                         embeddings to this many levels (off by default)
