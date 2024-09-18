@@ -242,7 +242,7 @@ class Type:
     return '_'.join(map(lambda el: el.replace('_', ' ').title().replace(' ', ''), [self.id] if self.prefix == [] else self.prefix))
 
   def select(self, anchor_var):
-    return [ f'##?{anchor_var}' ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
+    return [ f'?{anchor_var}' ] + [ f'{args.indent}{s}' for f in self.fields for s in f.select() ]
 
   def bindings(self, anchor_var):
     logger.debug(f'bindings for type {self.id} (anchor {anchor_var})')
@@ -296,8 +296,8 @@ class Type:
 {args.indent}class Config:
 {2*args.indent}title = "{self.name}"
 {2*args.indent}original_path_id = "{self.id}"
+{2*args.indent}group_by = "{'__'.join(self.prefix)}"
 ''' + ('\n'.join(f'{args.indent}{f}' for f in self.fields) + '\n')
-# {2*args.indent}rdfproxy_anchor = "?{self.id}"
 
   # return a set of this type and all its nested types
   # the result set is built up incrementally to avoid recursion
@@ -389,9 +389,11 @@ try:
 
         for prefix, url in args.namespace:
           rq.write(f'PREFIX {prefix}: <{url}>\n')
-        rq.write('\nSELECT\n')
-        for s in t.select():
-          rq.write(f'{s}\n')
+        # work around GraphDB API not allowing line breaks in the SELECT (throwing weird 'variable not present in GROUP BY' error)
+        rq.write('\nSELECT ' + ' '.join((s.strip() for s in t.select())))
+        # rq.write('\nSELECT\n')
+        # for s in t.select():
+        #   rq.write(f'{s}\n')
         rq.write('\nWHERE {\n')
         rq.write("\n".join(t.bindings()))
         rq.write('\n}\n\n')

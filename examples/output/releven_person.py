@@ -6,6 +6,7 @@ class Person_PersonAppellationAssertion_PersonAppellationSource(BaseModel):
     class Config:
         title = "Source"
         original_path_id = "source"
+        group_by = "person__person_appellation_assertion__person_appellation_source"
     source_publication: Annotated[AnyUrl, SPARQLBinding("person__person_appellation_assertion__person_appellation_source__source_publication")]
     source_seal: Annotated[AnyUrl, SPARQLBinding("person__person_appellation_assertion__person_appellation_source__source_seal")]
     source_reference: Annotated[str, SPARQLBinding("person__person_appellation_assertion__person_appellation_source__source_reference")]
@@ -16,6 +17,7 @@ class Person_PersonAppellationAssertion(BaseModel):
     class Config:
         title = "Name(s) in the sources"
         original_path_id = "person_appellation_assertion"
+        group_by = "person__person_appellation_assertion"
     person_appellation_source: Person_PersonAppellationAssertion_PersonAppellationSource
     person_appellation_is: Annotated[str, SPARQLBinding("person__person_appellation_assertion__person_appellation_is")]
 
@@ -24,6 +26,7 @@ class Person(BaseModel):
     class Config:
         title = "Person"
         original_path_id = "person"
+        group_by = "person"
     person_id_assignment: list[Annotated[AnyUrl, SPARQLBinding("person__person_id_assignment")]]
     person_appellation_assertion: list[Person_PersonAppellationAssertion]
     person_gender_assertion: list[Annotated[AnyUrl, SPARQLBinding("person__person_gender_assertion")]]

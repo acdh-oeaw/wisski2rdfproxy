@@ -5,28 +5,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
-SELECT
-##?person
-    ?person__person_id_assignment
-    ##?person__person_appellation_assertion
-        ##?person__person_appellation_assertion__person_appellation_source
-            ?person__person_appellation_assertion__person_appellation_source__source_publication
-            ?person__person_appellation_assertion__person_appellation_source__source_seal
-            ?person__person_appellation_assertion__person_appellation_source__source_reference
-            ?person__person_appellation_assertion__person_appellation_source__source_content
-        ?person__person_appellation_assertion__person_appellation_is
-    ?person__person_gender_assertion
-    ?person__person_ethnicity_assertion
-    ?person__person_descriptive_name
-    ?person__person_possession_assertion
-    ?person__person_status_assertion
-    ?person__person_religion_assertion
-    ?person__person_occupation_assertion
-    ?person__person_language_assertion
-    ?person__person_kinship_assertion
-    ?person__birth_circumstances_claim
-    ?person__person_death_assertion
-
+SELECT ?person ?person__person_id_assignment ?person__person_appellation_assertion ?person__person_appellation_assertion__person_appellation_source ?person__person_appellation_assertion__person_appellation_source__source_publication ?person__person_appellation_assertion__person_appellation_source__source_seal ?person__person_appellation_assertion__person_appellation_source__source_reference ?person__person_appellation_assertion__person_appellation_source__source_content ?person__person_appellation_assertion__person_appellation_is ?person__person_gender_assertion ?person__person_ethnicity_assertion ?person__person_descriptive_name ?person__person_possession_assertion ?person__person_status_assertion ?person__person_religion_assertion ?person__person_occupation_assertion ?person__person_language_assertion ?person__person_kinship_assertion ?person__birth_circumstances_claim ?person__person_death_assertion
 WHERE {
 ?person a crm:E21_Person.
 

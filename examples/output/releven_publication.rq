@@ -5,12 +5,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
-SELECT
-##?publication
-    ?publication__publication_reference
-    ##?publication__publication_creation
-        ?publication__publication_creation__publication_creation_event
-
+SELECT ?publication ?publication__publication_reference ?publication__publication_creation ?publication__publication_creation__publication_creation_event
 WHERE {
 ?publication a r11:Publication.
 
