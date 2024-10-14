@@ -58,6 +58,7 @@ i.add_argument('-ee', '--endpoint-exclude-fields', nargs='+', metavar=('path_id'
 i.add_argument('-ei', '--endpoint-include-fields', nargs='+', metavar=('path_id', 'include_field'), action='append', help='a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.', default=[])
 
 i = parser.add_argument_group('Output options')
+i.add_argument('--pagesize', type=int, default=10, help='default page-size of the generated endpoints (default: $(default)s)')
 i.add_argument('-o', '--output-prefix', help='file prefix for the python model and SPARQL query fields that will be generated for each endpoint (default: print both to stdout)')
 i.add_argument('-a', '--api', metavar='sparql_api_url', default='https://graphdb.r11.eu/repositories/RELEVEN', help='also generate FastAPI routes for all endpoints at the output_prefix location, pointing to the given SPARQL endpoint URL')
 i.add_argument('-r', '--auto-limit-model-recursion', nargs='?', type=int, const=1, help='NOT IMPLEMENTED YET: automatically limit recursive model embeddings to this many levels (off by default)')
@@ -412,12 +413,12 @@ try:
       for name, root_type in endpoints.items():
         py.write(f'''\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
 @app.get("/{name}/")
-def {name}():
+def {name}(page : int = 1, size : int = {args.pagesize}):
   adapter = SPARQLModelAdapter(
     target="{args.api}",
     query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{name}.rq").read(),
     model={root_type.type.classname()})
-  return adapter.query()
+  return adapter.query(page=page, size=size)
 ''')
       print(f'FastAPI routes written to {args.output_prefix}.py')
       print('run the following:')
