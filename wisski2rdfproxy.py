@@ -216,12 +216,9 @@ At the very minimum, you probably want to exclude the following path from the en
     return ''.join(w[0] for w in self.name.split('_') if len(w))
 
   def __str__(self):
-    # types are just containers of fields, their anchor variables don't need to be bound explicitly
-    tp = self.type if isinstance(self.type, Type) else f'Annotated[{self.type}, SPARQLBinding("{self.anchor()}")]'
-    if self.cardinality == 1:
-      return f'{self.name}: {tp}'
-    else:
-      return f'{self.name}: list[{tp}]'
+    # for lists, rdfproxy requires Annotated[list[type], SPARQLBinding(...)], NOT list[Annotated[type, SPARQLBinding(...])]]
+    tp = self.type if self.cardinality == 1 else f'list[{self.type}]'
+    return f'{self.name}: Annotated[{tp}, SPARQLBinding("{self.anchor()}")]'
 
   def __gt__(self, other):
     return str(self) > str(other)
@@ -411,14 +408,14 @@ try:
 
   if args.output_prefix and args.api:
     with open(f'{args.output_prefix}.py', 'w') as py:
-      py.write('from fastapi import FastAPI\nfrom rdfproxy import Page, SPARQLModelAdapter\n\napp = FastAPI()')
+      py.write('from fastapi import FastAPI\nfrom os import path\nfrom rdfproxy import Page, SPARQLModelAdapter\n\napp = FastAPI()')
       for name, root_type in endpoints.items():
         py.write(f'''\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
 @app.get("/{name}/")
 def {name}():
   adapter = SPARQLModelAdapter(
     target="{args.api}",
-    query=open("{basename(args.output_prefix)}_{name}.rq").read(),
+    query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{name}.rq").read(),
     model={root_type.type.classname()})
   return adapter.query()
 ''')
