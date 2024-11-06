@@ -5,88 +5,21 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
-SELECT ?person ?person__person_id_assignment ?person__person_appellation_assertion ?person__person_appellation_assertion__person_appellation_source ?person__person_appellation_assertion__person_appellation_source__source_publication ?person__person_appellation_assertion__person_appellation_source__source_seal ?person__person_appellation_assertion__person_appellation_source__source_reference ?person__person_appellation_assertion__person_appellation_source__source_content ?person__person_appellation_assertion__person_appellation_is ?person__person_gender_assertion ?person__person_ethnicity_assertion ?person__person_descriptive_name ?person__person_possession_assertion ?person__person_status_assertion ?person__person_religion_assertion ?person__person_occupation_assertion ?person__person_language_assertion ?person__person_kinship_assertion ?person__birth_circumstances_claim ?person__person_death_assertion
+SELECT
+?person
+    ?person__person_appellation_assertion
+    ?person__person_descriptive_name
+
 WHERE {
 ?person a crm:E21_Person.
 
-    OPTIONAL { 
-    ?person__person_id_assignment a crm:E15_Identifier_Assignment.
-    ?person__person_id_assignment crm:P140_assigned_attribute_to ?person.
-    }
-
-    OPTIONAL { 
+    OPTIONAL {
     ?person__person_appellation_assertion a star:E13_crm_P1.
     ?person__person_appellation_assertion crm:P140_assigned_attribute_to ?person.
-    
-        ?person__person_appellation_assertion__person_appellation_source a crm:E73_Information_Object.
-        ?person__person_appellation_assertion___pas crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
-        ?person__person_appellation_assertion___pas crm:P17_was_motivated_by ?person__person_appellation_assertion__person_appellation_source.
-        
-            ?person__person_appellation_assertion__person_appellation_source__source_publication a r11:Publication.
-            ?person__person_appellation_assertion__person_appellation_source___sp crm:P141_assigned ?person__person_appellation_assertion__person_appellation_source.
-            ?person__person_appellation_assertion__person_appellation_source___sp crm:P140_assigned_attribute_to ?person__person_appellation_assertion__person_appellation_source__source_publication.
-        
-            ?person__person_appellation_assertion__person_appellation_source__source_seal a r11:Boulloterion.
-            ?person__person_appellation_assertion__person_appellation_source___ss crm:P141_assigned ?person__person_appellation_assertion__person_appellation_source.
-            ?person__person_appellation_assertion__person_appellation_source___ss crm:P140_assigned_attribute_to ?person__person_appellation_assertion__person_appellation_source__source_seal.
-        
-            ?person__person_appellation_assertion__person_appellation_source crm:P3_has_note ?person__person_appellation_assertion__person_appellation_source__source_reference.
-        
-            ?person__person_appellation_assertion__person_appellation_source crm:P190_has_symbolic_content ?person__person_appellation_assertion__person_appellation_source__source_content.
-    
-        ?person__person_appellation_assertion___pai crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
-        ?person__person_appellation_assertion___pai crm:P141_assigned ?person__person_appellation_assertion___pai___pai.
-        ?person__person_appellation_assertion___pai___pai crm:P190_has_symbolic_content ?person__person_appellation_assertion__person_appellation_is.
     }
 
-    OPTIONAL { 
-    ?person__person_gender_assertion a star:E13_crm_P41.
-    ?person__person_gender_assertion crm:P141_assigned ?person.
-    }
-
-    OPTIONAL { 
-    ?person__person_ethnicity_assertion a star:E13_crm_P107.
-    ?person__person_ethnicity_assertion crm:P141_assigned ?person.
-    }
-
-    OPTIONAL { 
+    OPTIONAL {
     ?person crm:P3_has_note ?person__person_descriptive_name.
     }
-
-    OPTIONAL { 
-    ?person__person_possession_assertion a star:E13_crm_P51.
-    ?person__person_possession_assertion crm:P141_assigned ?person.
-    }
-
-    OPTIONAL { 
-    ?person__person_status_assertion a star:E13_sdhss_P26.
-    ?person__person_status_assertion crm:P141_assigned ?person.
-    }
-
-    OPTIONAL { 
-    ?person__person_religion_assertion a star:E13_sdhss_P36.
-    ?person__person_religion_assertion crm:P141_assigned ?person.
-    }
-
-    OPTIONAL { 
-    ?person__person_occupation_assertion a star:E13_sdhss_P13.
-    ?person__person_occupation_assertion crm:P141_assigned ?person.
-    }
-
-    OPTIONAL { 
-    ?person__person_language_assertion a star:E13_sdhss_P38.
-    ?person__person_language_assertion crm:P140_assigned_attribute_to ?person.
-    }
-
-    OPTIONAL { 
-    ?person__person_kinship_assertion a star:E13_sdhss_P17.
-    ?person__person_kinship_assertion crm:P141_assigned ?person.
-    }
-
-    ?person__birth_circumstances_claim a star:E13_crm_P98.
-    ?person__birth_circumstances_claim crm:P141_assigned ?person.
-
-    ?person__person_death_assertion a star:E13_crm_P100.
-    ?person__person_death_assertion crm:P141_assigned ?person.
 }
 

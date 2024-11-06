@@ -18,10 +18,10 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
                             [-ee path_id [exclude_field ...]]
-                            [-ei path_id [include_field ...]] [--pagesize PAGESIZE]
-                            [-o OUTPUT_PREFIX] [-a sparql_api_url]
-                            [-r [AUTO_LIMIT_MODEL_RECURSION]] [-i INDENT]
-                            [-ns prefix full_url]
+                            [-ei path_id [include_field ...]] [--cors [CORS ...]]
+                            [--pagesize PAGESIZE] [-o OUTPUT_PREFIX]
+                            [-a sparql_api_url] [-r [AUTO_LIMIT_MODEL_RECURSION]]
+                            [-i INDENT] [-ns prefix full_url]
 
 Generate rdfproxy models and queries from WissKI pathbuilder specifications
 
@@ -49,6 +49,7 @@ Endpoint/model options:
                         return value.
 
 Output options:
+  --cors [CORS ...]     allow CORS requests from these origins (default: $(default)s)
   --pagesize PAGESIZE   default page-size of the generated endpoints (default:
                         $(default)s)
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX

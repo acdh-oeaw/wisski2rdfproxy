@@ -5,7 +5,11 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
-SELECT ?external_authority ?external_authority__external_authority_display_name ?external_authority__external_authority_url
+SELECT
+?external_authority
+    ?external_authority__external_authority_display_name
+    ?external_authority__external_authority_url
+
 WHERE {
 ?external_authority a lrmoo:F11_Corporate_Body.
 
