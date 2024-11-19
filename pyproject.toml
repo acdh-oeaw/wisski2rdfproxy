@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "wisski2rdfproxy"
+version = "0.1.0"
+description = ""
+authors = ["Kevin Stadler <kevin.stadler@oeaw.ac.at>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+autopep8 = "^2.3.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pydantic = "^2.9.2"
+rdfproxy = {git = "https://github.com/acdh-oeaw/rdfproxy.git"}
+fastapi = {extras = ["standard"], version = "^0.115.5"}
+gitpython = "^3.1.43"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
