@@ -64,7 +64,7 @@ Output options:
                         NOT IMPLEMENTED YET: automatically limit recursive model
                         embeddings to this many levels (off by default)
   -i INDENT, --indent INDENT
-                        indentation to use for the python models (default: 4 spaces)
+                        indentation to use for the SPARQL queries (default: 2 spaces)
   -ns prefix full_url, --namespace prefix full_url
                         namespace replacements to carry out, use a -ns for every
                         prefix specification (default: [['crm', 'http://www.cidoc-

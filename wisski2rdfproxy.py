@@ -4,6 +4,7 @@
 import argparse
 from contextlib import nullcontext
 import copy
+from io import StringIO
 import json
 import logging
 from os import getenv
@@ -11,6 +12,8 @@ from os.path import basename
 import sys
 import textwrap
 import xml.etree.ElementTree as ET
+
+import autopep8
 
 sys.setrecursionlimit(100)
 
@@ -136,8 +139,8 @@ i.add_argument(
 i.add_argument(
     "-i",
     "--indent",
-    default="    ",
-    help="indentation to use for the python models (default: 4 spaces)",
+    default="  ",
+    help="indentation to use for the SPARQL queries (default: 2 spaces)",
 )
 i.add_argument(
     "-ns",
@@ -488,6 +491,11 @@ def process_path(p):
     return p
 
 
+def write_python(io_obj, filename):
+    with open(filename, mode="w") as f:
+        print(autopep8.fix_code(io_obj.getvalue()), file=f)
+
+
 try:
     paths = {
         p.name: p
@@ -545,9 +553,7 @@ try:
         logger.debug(
             f"endpoint {name} requires the following types: {[t.id for t in required_types]}"
         )
-        with open(
-            f"{args.output_prefix}_{name}.py", "w"
-        ) if args.output_prefix else nullcontext(sys.stdout) as py:
+        with StringIO() if args.output_prefix else nullcontext(sys.stdout) as py:
             with open(
                 f"{args.output_prefix}_{name}.rq", "w"
             ) if args.output_prefix else nullcontext(sys.stdout) as rq:
@@ -569,6 +575,8 @@ try:
                 rq.write("\nWHERE {\n")
                 rq.write("\n".join(t.bindings()))
                 rq.write("\n}\n\n")
+            if args.output_prefix:
+                write_python(py, f"{args.output_prefix}_{name}.py")
 
         logger.info(
             f'Generated endpoint "{name}", consisting of {len(required_types)} nested model class(es)'
@@ -590,7 +598,7 @@ try:
         write_endpoint(name, endpoint_types)
 
     if args.output_prefix and args.api:
-        with open(f"{args.output_prefix}.py", "w") as py:
+        with StringIO() as py:
             py.write(
                 textwrap.dedent("""                from fastapi import FastAPI
                 from os import path
@@ -623,6 +631,7 @@ def {name}(page : int = 1, size : int = {args.pagesize}) -> Page[{root_type.type
 {2*args.indent}model={root_type.type.classname()})
 {args.indent}return adapter.query(page=page, size=size)
 """)
+            write_python(py, f"{args.output_prefix}.py")
             print(f"FastAPI routes written to {args.output_prefix}.py")
             print("run the following:")
             print(f"$ fastapi dev {args.output_prefix}.py")
@@ -633,5 +642,5 @@ def {name}(page : int = 1, size : int = {args.pagesize}) -> Page[{root_type.type
         )
 
 except RuntimeError as e:
-    logger.error(e)
+    logger.fatal(e)
     sys.exit(1)
