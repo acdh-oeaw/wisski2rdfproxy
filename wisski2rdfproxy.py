@@ -15,6 +15,8 @@ import xml.etree.ElementTree as ET
 
 import autopep8
 
+import isort
+
 sys.setrecursionlimit(100)
 
 
@@ -493,7 +495,7 @@ def process_path(p):
 
 def write_python(io_obj, filename):
     with open(filename, mode="w") as f:
-        print(autopep8.fix_code(io_obj.getvalue()), file=f)
+        print(isort.code(autopep8.fix_code(io_obj.getvalue())), file=f)
 
 
 try:
@@ -600,7 +602,8 @@ try:
     if args.output_prefix and args.api:
         with StringIO() as py:
             py.write(
-                textwrap.dedent("""                from fastapi import FastAPI
+                textwrap.dedent("""
+                from fastapi import FastAPI
                 from os import path
                 from rdfproxy import Page, SPARQLModelAdapter
 
@@ -610,17 +613,28 @@ try:
             if len(args.cors):
                 py.write(
                     textwrap.dedent(f"""
-                from fastapi.middleware.cors import CORSMiddleware
+                    from fastapi.middleware.cors import CORSMiddleware
 
-                app.add_middleware(
-                    CORSMiddleware,
-                    allow_origins={str(args.cors)},
-                    allow_credentials=True,
-                    allow_methods=["*"],
-                    allow_headers=["*"],
+                    app.add_middleware(
+                        CORSMiddleware,
+                        allow_origins={str(args.cors)},
+                        allow_credentials=True,
+                        allow_methods=["*"],
+                        allow_headers=["*"],
+                    )
+                    """)
                 )
-                """)
-                )
+            py.write(
+                """from git import Repo
+
+
+# The automatic health check endpoint is /. The return code has to be 200 or 30x.
+@app.get("/")
+def version():
+    repo = Repo(search_parent_directories=True)
+    return {"version": repo.git.describe(tags=True, dirty=True, always=True)}"""
+            )
+
             for name, root_type in endpoints.items():
                 py.write(f"""\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
 @app.get("/{name}/")

@@ -1,6 +1,7 @@
-from pydantic import BaseModel, AnyUrl
-from rdfproxy import SPARQLBinding
 from typing import Annotated
+
+from pydantic import AnyUrl, BaseModel
+from rdfproxy import SPARQLBinding
 
 
 class Boulloterion_BoulloterionSealAssertion_BoulloterionSealBy6606A275376D5(BaseModel):

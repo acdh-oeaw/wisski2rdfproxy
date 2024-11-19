@@ -1,6 +1,7 @@
-from pydantic import BaseModel, AnyUrl
-from rdfproxy import SPARQLBinding
 from typing import Annotated
+
+from pydantic import AnyUrl, BaseModel
+from rdfproxy import SPARQLBinding
 
 
 class ExternalAuthority(BaseModel):

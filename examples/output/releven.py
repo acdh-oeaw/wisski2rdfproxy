@@ -1,11 +1,14 @@
-from releven_person import Person
-from releven_boulloterion import Boulloterion
-from releven_publication import Publication
-from releven_external_authority import ExternalAuthority
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
+
 from os import path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from git import Repo
 from rdfproxy import Page, SPARQLModelAdapter
+from releven_boulloterion import Boulloterion
+from releven_external_authority import ExternalAuthority
+from releven_person import Person
+from releven_publication import Publication
 
 app = FastAPI()
 
@@ -17,6 +20,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# The automatic health check endpoint is /. The return code has to be 200 or 30x.
+@app.get("/")
+def version():
+    repo = Repo(search_parent_directories=True)
+    return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
 
 @app.get("/external_authority/")
