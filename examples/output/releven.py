@@ -29,7 +29,7 @@ def version():
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
 
-@app.get("/external_authority/")
+@app.get("/external_authority")
 def external_authority(page: int = 1, size: int = 10) -> Page[ExternalAuthority]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
@@ -39,7 +39,7 @@ def external_authority(page: int = 1, size: int = 10) -> Page[ExternalAuthority]
     return adapter.query(page=page, size=size)
 
 
-@app.get("/publication/")
+@app.get("/publication")
 def publication(page: int = 1, size: int = 10) -> Page[Publication]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
@@ -49,7 +49,7 @@ def publication(page: int = 1, size: int = 10) -> Page[Publication]:
     return adapter.query(page=page, size=size)
 
 
-@app.get("/boulloterion/")
+@app.get("/boulloterion")
 def boulloterion(page: int = 1, size: int = 10) -> Page[Boulloterion]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
@@ -59,7 +59,7 @@ def boulloterion(page: int = 1, size: int = 10) -> Page[Boulloterion]:
     return adapter.query(page=page, size=size)
 
 
-@app.get("/person/")
+@app.get("/person")
 def person(page: int = 1, size: int = 10) -> Page[Person]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",

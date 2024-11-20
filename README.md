@@ -4,6 +4,9 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 
 ### TODOs / missing implementation
 
+- [ ] add support for reverse-traversal of paths (especially across `entity_reference` boundaries)
+- [ ] add option to name endpoints
+- [ ] allow `cardinality=1` model fields to be specified as optional
 - [ ] assure that binding variable names within queries are actually unique
 - [ ] add support for limited-level `.*.*[...]` to `--endpoint_include_fields`
 - [ ] implement auto-limiting of recursive embeddings
@@ -18,10 +21,11 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
                             [-ee path_id [exclude_field ...]]
-                            [-ei path_id [include_field ...]] [--cors [CORS ...]]
-                            [--pagesize PAGESIZE] [-o OUTPUT_PREFIX]
-                            [-a sparql_api_url] [-r [AUTO_LIMIT_MODEL_RECURSION]]
-                            [-i INDENT] [-ns prefix full_url]
+                            [-ei path_id [include_field ...]] [-0]
+                            [--cors [CORS ...]] [--pagesize PAGESIZE]
+                            [-o OUTPUT_PREFIX] [-a sparql_api_url]
+                            [-r [AUTO_LIMIT_MODEL_RECURSION]] [-i INDENT]
+                            [-ns prefix full_url]
 
 Generate rdfproxy models and queries from WissKI pathbuilder specifications
 
@@ -49,6 +53,8 @@ Endpoint/model options:
                         return value.
 
 Output options:
+  -0, --everything-optional
+                        make all Wisski elements with cardinality=1 optional
   --cors [CORS ...]     allow CORS requests from these origins (default: $(default)s)
   --pagesize PAGESIZE   default page-size of the generated endpoints (default:
                         $(default)s)

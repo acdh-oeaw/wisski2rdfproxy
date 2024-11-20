@@ -106,6 +106,12 @@ i.add_argument(
 
 i = parser.add_argument_group("Output options")
 i.add_argument(
+    "-0",
+    "--everything-optional",
+    action="store_true",
+    help="make all Wisski elements with cardinality=1 optional",
+)
+i.add_argument(
     "--cors",
     nargs="*",
     default=["*"],
@@ -348,9 +354,18 @@ At the very minimum, you probably want to exclude the following path from the en
         return "".join(w[0] for w in self.name.split("_") if len(w))
 
     def __str__(self):
-        # for lists, rdfproxy requires Annotated[list[type], SPARQLBinding(...)], NOT list[Annotated[type, SPARQLBinding(...])]]
-        tp = self.type if self.cardinality == 1 else f"list[{self.type}]"
-        return f'{self.name}: Annotated[{tp}, SPARQLBinding("{self.anchor()}")]'
+        if self.cardinality != 1:
+            # for lists, rdfproxy requires Annotated[list[type], SPARQLBinding(...)], NOT list[Annotated[type, SPARQLBinding(...])]]
+            tp = f"list[{self.type}]"
+        elif args.everything_optional:
+            tp = f"{self.type} | None"
+        else:
+            tp = self.type
+        tp = f'{self.name}: Annotated[{tp}, SPARQLBinding("{self.anchor()}")]'
+        if self.cardinality == 1 and args.everything_optional:
+            return tp + " = None"
+        else:
+            return tp
 
     def __gt__(self, other):
         return str(self) > str(other)
@@ -445,15 +460,16 @@ class Type:
         model = f"""class {self.classname()}(BaseModel):
 {args.indent}class Config:
 {2*args.indent}title = "{self.name}"
-{2*args.indent}model_bool = "{'__'.join(self.prefix)}"
+{2*args.indent}model_bool = "id"
 """
         if any((f.cardinality == -1 for f in self.fields)):
             model += f"{2*args.indent}group_by = \"{'__'.join(self.prefix)}\"\n"
 
+        model += f"{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding(\"{'__'.join(self.prefix)}\")] = None\n"
+
         return model + ("\n".join(f"{args.indent}{f}" for f in self.fields) + "\n")
 
     # {2*args.indent}original_path_id = "{self.id}"
-    # {args.indent}id: Annotated[AnyUrl, SPARQLBinding("{'__'.join(self.prefix)}")]
 
     # return a set of this type and all its nested types
     # the result set is built up incrementally to avoid recursion
@@ -637,7 +653,7 @@ def version():
 
             for name, root_type in endpoints.items():
                 py.write(f"""\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
-@app.get("/{name}/")
+@app.get("/{name}")
 def {name}(page : int = 1, size : int = {args.pagesize}) -> Page[{root_type.type.classname()}]:
 {args.indent}adapter = SPARQLModelAdapter(
 {2*args.indent}target="{args.api}",
