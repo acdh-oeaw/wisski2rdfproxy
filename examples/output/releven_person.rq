@@ -15,7 +15,7 @@ WHERE {
 
   OPTIONAL {
   ?person__person_appellation_assertion a star:E13_crm_P1.
-  ?person__person_appellation_assertion crm:P140_assigned_attribute_to ?person.
+  ?person ^crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
   }
 
   OPTIONAL {

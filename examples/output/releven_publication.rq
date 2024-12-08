@@ -18,11 +18,10 @@ WHERE {
 
   OPTIONAL {
   ?publication__publication_creation a star:E13_lrmoo_R24.
-  ?publication__publication_creation crm:P141_assigned ?publication.
+  ?publication ^crm:P141_assigned ?publication__publication_creation.
   
     ?publication__publication_creation__publication_creation_event a lrmoo:F30_Manifestation_Creation.
-    ?publication__publication_creation___pce crm:P141_assigned ?publication__publication_creation.
-    ?publication__publication_creation___pce crm:P140_assigned_attribute_to ?publication__publication_creation__publication_creation_event.
+    ?publication__publication_creation crm:P140_assigned_attribute_to ?publication__publication_creation__publication_creation_event.
   }
 }
 

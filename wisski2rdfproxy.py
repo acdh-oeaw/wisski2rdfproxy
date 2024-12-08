@@ -306,7 +306,7 @@ At the very minimum, you probably want to exclude the following path from the en
         else:
             return [f"?{self.anchor()}"]
 
-    def bindings(self, anchor_var=None):
+    def bindings(self, anchor_var=None, prefix_length=0):
         logger.debug(
             f"bindings for field {self.name} (anchor {anchor_var}) {self.prefix}"
         )
@@ -314,11 +314,11 @@ At the very minimum, you probably want to exclude the following path from the en
 
         bindings = []
         prevvarname = var
-        fullpath = (
-            self.paths
-            if self.datatype_property is None
-            else self.paths + [self.datatype_property]
-        )
+
+        # TODO reset prefix_length to 0 if this is an entity_reference boundary
+        fullpath = self.paths[prefix_length:]
+        if self.datatype_property is not None:
+            fullpath.append(self.datatype_property)
         # for i in range(int((len(self.paths)) / 2)):
         nsteps = int(len(fullpath) / 2)
         for i in range(nsteps):
@@ -328,15 +328,11 @@ At the very minimum, you probably want to exclude the following path from the en
                 else f"{prevvarname}___{self.short_var()}"
             )
             p = fullpath[2 * i + 1]
-            bindings.append(
-                f"?{nextvarname} {p[1:]} ?{prevvarname}."
-                if p.startswith("^")
-                else f"?{prevvarname} {p} ?{nextvarname}."
-            )
+            bindings.append(f"?{prevvarname} {p} ?{nextvarname}.")
             prevvarname = nextvarname
 
         if isinstance(self.type, Type):
-            bindings = bindings + self.type.bindings(prevvarname)
+            bindings = bindings + self.type.bindings(prevvarname, len(self.paths) - 1)
 
         # if self.datatype_property != None:
         # bindings.append(f'{prevvarname} {self.datatype_property} {self.anchor()}.')
@@ -396,12 +392,13 @@ class Type:
             f"{args.indent}{s}" for f in self.fields for s in f.select()
         ]
 
-    def bindings(self, anchor_var):
+    def bindings(self, anchor_var, prefix_length):
         logger.debug(f"bindings for type {self.id} (anchor {anchor_var})")
         bindings = []
         for f in self.fields:
             bindings.extend(
-                [""] + [f"{args.indent}{b}" for b in f.bindings(anchor_var)]
+                [""]
+                + [f"{args.indent}{b}" for b in f.bindings(anchor_var, prefix_length)]
             )
         return bindings
 
@@ -457,15 +454,18 @@ class Type:
 
     # return pydantic model definition
     def model(self):
-        model = f"""class {self.classname()}(BaseModel):
-{args.indent}class Config:
-{2*args.indent}title = "{self.name}"
-{2*args.indent}model_bool = "id"
-"""
+        model_config = {"title": f'"{self.name}"', "model_bool": '"id"'}
         if any((f.cardinality == -1 for f in self.fields)):
-            model += f"{2*args.indent}group_by = \"{'__'.join(self.prefix)}\"\n"
+            model_config["group_by"] = '"id"'
 
-        model += f"{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding(\"{'__'.join(self.prefix)}\")] = None\n"
+        model = f"""class {self.classname()}(BaseModel):
+{args.indent}model_config = ConfigDict("""
+        model += "\n".join(
+            f"{2*args.indent}{key} = {val}," for key, val in model_config.items()
+        )
+
+        # model += f")\n{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding(\"{'__'.join(self.prefix)}\")] = None\n"
+        model += f")\n{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding(\"{'__'.join(self.prefix)}\")] = Field(default=None, exclude=True)\n"
 
         return model + ("\n".join(f"{args.indent}{f}" for f in self.fields) + "\n")
 
@@ -572,12 +572,14 @@ try:
             f"endpoint {name} requires the following types: {[t.id for t in required_types]}"
         )
         with StringIO() if args.output_prefix else nullcontext(sys.stdout) as py:
-            with open(
-                f"{args.output_prefix}_{name}.rq", "w"
-            ) if args.output_prefix else nullcontext(sys.stdout) as rq:
+            with (
+                open(f"{args.output_prefix}_{name}.rq", "w")
+                if args.output_prefix
+                else nullcontext(sys.stdout) as rq
+            ):
                 if py != sys.stdout:
                     py.write(
-                        "from pydantic import BaseModel, AnyUrl\nfrom rdfproxy import SPARQLBinding\nfrom typing import Annotated\n\n"
+                        "from pydantic import AnyUrl, BaseModel, Field # noqa: F401\nfrom rdfproxy import ConfigDict, SPARQLBinding\nfrom typing import Annotated\n\n"
                     )
 
                 for n in reversed(required_types):
@@ -621,7 +623,7 @@ try:
                 textwrap.dedent("""
                 from fastapi import FastAPI
                 from os import path
-                from rdfproxy import Page, SPARQLModelAdapter
+                from rdfproxy import Page, QueryParameters, SPARQLModelAdapter
 
                 app = FastAPI()
                 """)
@@ -659,7 +661,8 @@ def {name}(page : int = 1, size : int = {args.pagesize}) -> Page[{root_type.type
 {2*args.indent}target="{args.api}",
 {2*args.indent}query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{name}.rq").read().replace('\\n ', ' '),
 {2*args.indent}model={root_type.type.classname()})
-{args.indent}return adapter.query(page=page, size=size)
+{args.indent}parameters = QueryParameters(page=page, size=size)
+{args.indent}return adapter.query(parameters)
 """)
             write_python(py, f"{args.output_prefix}.py")
             print(f"FastAPI routes written to {args.output_prefix}.py")
