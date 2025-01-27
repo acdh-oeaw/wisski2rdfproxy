@@ -30,12 +30,8 @@ def version():
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
 
-class external_authorityQueryParameters(QueryParameters):
-    pass
-
-
 @app.get("/external_authority")
-def external_authority(params: Annotated[external_authorityQueryParameters, Query()]) -> Page[ExternalAuthority]:
+def external_authority(params: Annotated[QueryParameters, Query()]) -> Page[ExternalAuthority]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
@@ -44,12 +40,8 @@ def external_authority(params: Annotated[external_authorityQueryParameters, Quer
     return adapter.query(params)
 
 
-class publicationQueryParameters(QueryParameters):
-    pass
-
-
 @app.get("/publication")
-def publication(params: Annotated[publicationQueryParameters, Query()]) -> Page[Publication]:
+def publication(params: Annotated[QueryParameters, Query()]) -> Page[Publication]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
@@ -58,12 +50,8 @@ def publication(params: Annotated[publicationQueryParameters, Query()]) -> Page[
     return adapter.query(params)
 
 
-class boulloterionQueryParameters(QueryParameters):
-    pass
-
-
 @app.get("/boulloterion")
-def boulloterion(params: Annotated[boulloterionQueryParameters, Query()]) -> Page[Boulloterion]:
+def boulloterion(params: Annotated[QueryParameters, Query()]) -> Page[Boulloterion]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
@@ -72,12 +60,8 @@ def boulloterion(params: Annotated[boulloterionQueryParameters, Query()]) -> Pag
     return adapter.query(params)
 
 
-class personQueryParameters(QueryParameters):
-    pass
-
-
 @app.get("/person")
-def person(params: Annotated[personQueryParameters, Query()]) -> Page[Person]:
+def person(params: Annotated[QueryParameters, Query()]) -> Page[Person]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(

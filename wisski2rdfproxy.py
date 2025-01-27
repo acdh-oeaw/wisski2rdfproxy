@@ -118,6 +118,12 @@ i.add_argument(
     help="allow CORS requests from these origins (default: $(default)s)",
 )
 i.add_argument(
+    "--custom-query-parameters",
+    action="store_true",
+    default=False,
+    help="Whether to create a QueryParameters class for every endpoint",
+)
+i.add_argument(
     "--pagesize",
     type=int,
     default=10,
@@ -621,9 +627,10 @@ try:
         with StringIO() as py:
             py.write(
                 textwrap.dedent("""
-                from fastapi import FastAPI
+                from fastapi import FastAPI, Query
                 from os import path
                 from rdfproxy import Page, QueryParameters, SPARQLModelAdapter
+                from typing import Annotated
 
                 app = FastAPI()
                 """)
@@ -654,15 +661,21 @@ def version():
             )
 
             for name, root_type in endpoints.items():
+                params_class = "QueryParameters"
+                # TODO set args.pagesize default
+                if args.custom_query_parameters:
+                    params_class = name + params_class
+                    py.write(
+                        f"\n\nclass {params_class}(QueryParameters):\n{args.indent}pass"
+                    )
                 py.write(f"""\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
 @app.get("/{name}")
-def {name}(page : int = 1, size : int = {args.pagesize}) -> Page[{root_type.type.classname()}]:
+def {name}(params : Annotated[{params_class}, Query()]) -> Page[{root_type.type.classname()}]:
 {args.indent}adapter = SPARQLModelAdapter(
-{2*args.indent}target="{args.api}",
-{2*args.indent}query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{name}.rq").read().replace('\\n ', ' '),
-{2*args.indent}model={root_type.type.classname()})
-{args.indent}parameters = QueryParameters(page=page, size=size)
-{args.indent}return adapter.query(parameters)
+{2 * args.indent}target="{args.api}",
+{2 * args.indent}query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{name}.rq").read().replace('\\n ', ' '),
+{2 * args.indent}model={root_type.type.classname()})
+{args.indent}return adapter.query(params)
 """)
             write_python(py, f"{args.output_prefix}.py")
             print(f"FastAPI routes written to {args.output_prefix}.py")
