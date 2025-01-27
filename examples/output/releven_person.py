@@ -9,7 +9,7 @@ class Person(BaseModel):
                               model_bool="id",
                               group_by="id",)
     id: Annotated[AnyUrl | None, SPARQLBinding(
-        "person")] = Field(default=None, exclude=True)
+        "person")] = Field(default=None, exclude=False)
     person_appellation_assertion: Annotated[list[AnyUrl], SPARQLBinding(
         "person__person_appellation_assertion")]
     person_descriptive_name: Annotated[list[str], SPARQLBinding(

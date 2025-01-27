@@ -9,7 +9,7 @@ class Boulloterion_BoulloterionSealAssertion_BoulloterionSealBy6606A275376D5(Bas
                               model_bool="id",
                               group_by="id",)
     id: Annotated[AnyUrl | None, SPARQLBinding(
-        "boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5")] = Field(default=None, exclude=True)
+        "boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5")] = Field(default=None, exclude=False)
     author_list_members: Annotated[list[AnyUrl], SPARQLBinding(
         "boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5__author_list_members")]
     author_list_namestring: Annotated[str, SPARQLBinding(
@@ -20,7 +20,7 @@ class Boulloterion_BoulloterionSealAssertion(BaseModel):
     model_config = ConfigDict(title="boulloterion_seal_assertion",
                               model_bool="id",)
     id: Annotated[AnyUrl | None, SPARQLBinding(
-        "boulloterion__boulloterion_seal_assertion")] = Field(default=None, exclude=True)
+        "boulloterion__boulloterion_seal_assertion")] = Field(default=None, exclude=False)
     boulloterion_seal_by: Annotated[AnyUrl, SPARQLBinding(
         "boulloterion__boulloterion_seal_assertion__boulloterion_seal_by")]
     boulloterion_produced_seal: Annotated[None, SPARQLBinding(
@@ -36,7 +36,7 @@ class Boulloterion(BaseModel):
                               model_bool="id",
                               group_by="id",)
     id: Annotated[AnyUrl | None, SPARQLBinding(
-        "boulloterion")] = Field(default=None, exclude=True)
+        "boulloterion")] = Field(default=None, exclude=False)
     boulloterion_seal_assertion: Annotated[list[Boulloterion_BoulloterionSealAssertion], SPARQLBinding(
         "boulloterion__boulloterion_seal_assertion")]
     boulloterion_description: Annotated[str, SPARQLBinding(

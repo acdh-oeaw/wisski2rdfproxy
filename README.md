@@ -4,14 +4,15 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 
 ### TODOs / missing implementation
 
+- [ ] add option to name endpoints ([#1](https://github.com/acdh-oeaw/wisski2rdfproxy/issues/1))
 - [ ] add support for reverse-traversal of paths (especially across `entity_reference` boundaries)
-- [ ] add option to name endpoints
 - [ ] allow `cardinality=1` model fields to be specified as optional
 - [ ] assure that binding variable names within queries are actually unique
 - [ ] add support for limited-level `.*.*[...]` to `--endpoint_include_fields`
 - [ ] implement auto-limiting of recursive embeddings
 - [ ] if there is a partial match for an entity in the triple store which is missing some mandatory field, that partial entity will (erroneously) show up in any endpoint which excludes the mandatory field
 - [ ] if there is a redundant more specific exclude, the broader exclude is currently disregarded without any warning
+- [ ] use a proper parser/serializer (like [larql](https://github.com/lu-pl/larql/)) to generate the SPARQL-queries
 
 ### Usage
 
@@ -22,10 +23,10 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
                             [-ee path_id [exclude_field ...]]
                             [-ei path_id [include_field ...]] [-0]
-                            [--cors [CORS ...]] [--pagesize PAGESIZE]
-                            [-o OUTPUT_PREFIX] [-a sparql_api_url]
-                            [-r [AUTO_LIMIT_MODEL_RECURSION]] [-i INDENT]
-                            [-ns prefix full_url]
+                            [--cors [CORS ...]] [--custom-query-parameters]
+                            [--pagesize PAGESIZE] [-o OUTPUT_PREFIX]
+                            [-a sparql_api_url] [-r [AUTO_LIMIT_MODEL_RECURSION]]
+                            [-i INDENT] [-ns prefix full_url]
 
 Generate rdfproxy models and queries from WissKI pathbuilder specifications
 
@@ -56,6 +57,8 @@ Output options:
   -0, --everything-optional
                         make all Wisski elements with cardinality=1 optional
   --cors [CORS ...]     allow CORS requests from these origins (default: $(default)s)
+  --custom-query-parameters
+                        Whether to create a QueryParameters class for every endpoint
   --pagesize PAGESIZE   default page-size of the generated endpoints (default:
                         $(default)s)
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX

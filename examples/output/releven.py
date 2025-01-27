@@ -1,7 +1,8 @@
 
 from os import path
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from git import Repo
 from rdfproxy import Page, QueryParameters, SPARQLModelAdapter
@@ -29,46 +30,58 @@ def version():
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
 
+class external_authorityQueryParameters(QueryParameters):
+    pass
+
+
 @app.get("/external_authority")
-def external_authority(page: int = 1, size: int = 10) -> Page[ExternalAuthority]:
+def external_authority(params: Annotated[external_authorityQueryParameters, Query()]) -> Page[ExternalAuthority]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
             f"{path.dirname(path.realpath(__file__))}/releven_external_authority.rq").read().replace('\n ', ' '),
         model=ExternalAuthority)
-    parameters = QueryParameters(page=page, size=size)
-    return adapter.query(parameters)
+    return adapter.query(params)
+
+
+class publicationQueryParameters(QueryParameters):
+    pass
 
 
 @app.get("/publication")
-def publication(page: int = 1, size: int = 10) -> Page[Publication]:
+def publication(params: Annotated[publicationQueryParameters, Query()]) -> Page[Publication]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
             f"{path.dirname(path.realpath(__file__))}/releven_publication.rq").read().replace('\n ', ' '),
         model=Publication)
-    parameters = QueryParameters(page=page, size=size)
-    return adapter.query(parameters)
+    return adapter.query(params)
+
+
+class boulloterionQueryParameters(QueryParameters):
+    pass
 
 
 @app.get("/boulloterion")
-def boulloterion(page: int = 1, size: int = 10) -> Page[Boulloterion]:
+def boulloterion(params: Annotated[boulloterionQueryParameters, Query()]) -> Page[Boulloterion]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
             f"{path.dirname(path.realpath(__file__))}/releven_boulloterion.rq").read().replace('\n ', ' '),
         model=Boulloterion)
-    parameters = QueryParameters(page=page, size=size)
-    return adapter.query(parameters)
+    return adapter.query(params)
+
+
+class personQueryParameters(QueryParameters):
+    pass
 
 
 @app.get("/person")
-def person(page: int = 1, size: int = 10) -> Page[Person]:
+def person(params: Annotated[personQueryParameters, Query()]) -> Page[Person]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
             f"{path.dirname(path.realpath(__file__))}/releven_person.rq").read().replace('\n ', ' '),
         model=Person)
-    parameters = QueryParameters(page=page, size=size)
-    return adapter.query(parameters)
+    return adapter.query(params)
 
