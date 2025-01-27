@@ -24,13 +24,13 @@ def version():
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
 
-from releven_external_authority import ExternalAuthority
+from releven_external_authority import ExternalAuthority_ExternalAuthority
 
 
 @app.get("/external_authority")
 def external_authority(
     params: Annotated[QueryParameters, Query()],
-) -> Page[ExternalAuthority]:
+) -> Page[ExternalAuthority_ExternalAuthority]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(
@@ -38,66 +38,72 @@ def external_authority(
         )
         .read()
         .replace("\n ", " "),
-        model=ExternalAuthority,
+        model=ExternalAuthority_ExternalAuthority,
     )
     return adapter.query(params)
 
 
-from releven_publication import Publication
+from releven_publication import Publication_Publication
 
 
 @app.get("/publication")
-def publication(params: Annotated[QueryParameters, Query()]) -> Page[Publication]:
+def publication(
+    params: Annotated[QueryParameters, Query()],
+) -> Page[Publication_Publication]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(f"{path.dirname(path.realpath(__file__))}/releven_publication.rq")
         .read()
         .replace("\n ", " "),
-        model=Publication,
+        model=Publication_Publication,
     )
     return adapter.query(params)
 
 
-from releven_boulloterion import Boulloterion
+from releven_boulloterion import Boulloterion_Boulloterion
 
 
 @app.get("/boulloterion")
-def boulloterion(params: Annotated[QueryParameters, Query()]) -> Page[Boulloterion]:
+def boulloterion(
+    params: Annotated[QueryParameters, Query()],
+) -> Page[Boulloterion_Boulloterion]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(f"{path.dirname(path.realpath(__file__))}/releven_boulloterion.rq")
         .read()
         .replace("\n ", " "),
-        model=Boulloterion,
+        model=Boulloterion_Boulloterion,
     )
     return adapter.query(params)
 
 
-from releven__person_stub import Person
+from releven__person_stub import PersonStub_Person
 
 
 @app.get("/person_stub")
-def _person_stub(params: Annotated[QueryParameters, Query()]) -> Page[Person]:
+def _person_stub(
+    params: Annotated[QueryParameters, Query()],
+) -> Page[PersonStub_Person]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(f"{path.dirname(path.realpath(__file__))}/releven__person_stub.rq")
         .read()
         .replace("\n ", " "),
-        model=Person,
+        model=PersonStub_Person,
     )
     return adapter.query(params)
 
 
-from releven_person import Person
+from releven_person import Person_Person
 
 
 @app.get("/person")
-def person(params: Annotated[QueryParameters, Query()]) -> Page[Person]:
+def person(params: Annotated[QueryParameters, Query()]) -> Page[Person_Person]:
     adapter = SPARQLModelAdapter(
         target="https://graphdb.r11.eu/repositories/RELEVEN",
         query=open(f"{path.dirname(path.realpath(__file__))}/releven_person.rq")
         .read()
         .replace("\n ", " "),
-        model=Person,
+        model=Person_Person,
     )
     return adapter.query(params)

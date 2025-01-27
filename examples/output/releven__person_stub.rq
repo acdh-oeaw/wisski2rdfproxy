@@ -6,20 +6,20 @@ PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
 SELECT
-?person
-  ?person__person_appellation_assertion
-  ?person__person_descriptive_name
+?_person_stub__person
+  ?_person_stub__person__person_appellation_assertion
+  ?_person_stub__person__person_descriptive_name
 
 WHERE {
-?person a crm:E21_Person.
+?_person_stub__person a crm:E21_Person.
 
   OPTIONAL {
-  ?person__person_appellation_assertion a star:E13_crm_P1.
-  ?person ^crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
+  ?_person_stub__person__person_appellation_assertion a star:E13_crm_P1.
+  ?_person_stub__person ^crm:P140_assigned_attribute_to ?_person_stub__person__person_appellation_assertion.
   }
 
   OPTIONAL {
-  ?person crm:P3_has_note ?person__person_descriptive_name.
+  ?_person_stub__person crm:P3_has_note ?_person_stub__person__person_descriptive_name.
   }
 }
 

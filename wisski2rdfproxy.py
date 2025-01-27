@@ -635,7 +635,9 @@ try:
             raise RuntimeError(
                 f"Endpoint path {endpoint_path} is specified more than once"
             )
-        endpoints[endpoint_path] = paths[path_id].clone_exclude(fields)
+        endpoints[endpoint_path] = paths[path_id].clone_exclude(
+            fields, [endpoint_path.replace("/", "_")]
+        )
 
     for n, *fields in args.endpoint_include_fields:
         path_id, endpoint_path = split_path(n)
@@ -643,7 +645,9 @@ try:
             raise RuntimeError(
                 f"Endpoint path {endpoint_path} is specified more than once"
             )
-        endpoints[endpoint_path] = paths[path_id].clone_include(fields)
+        endpoints[endpoint_path] = paths[path_id].clone_include(
+            fields, [endpoint_path.replace("/", "_")]
+        )
 
     # write to files or stdout
     for name, endpoint_types in endpoints.items():

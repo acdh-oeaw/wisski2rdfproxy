@@ -6,41 +6,41 @@ PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
 SELECT
-?boulloterion
-  ?boulloterion__boulloterion_seal_assertion
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_produced_seal
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5
-      ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5__author_list_members
-      ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5__author_list_namestring
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_source
-  ?boulloterion__boulloterion_description
+?boulloterion__boulloterion
+  ?boulloterion__boulloterion__boulloterion_seal_assertion
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_produced_seal
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5
+      ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5__author_list_members
+      ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5__author_list_namestring
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_source
+  ?boulloterion__boulloterion__boulloterion_description
 
 WHERE {
-?boulloterion a r11:Boulloterion.
+?boulloterion__boulloterion a r11:Boulloterion.
 
   OPTIONAL {
-  ?boulloterion__boulloterion_seal_assertion a star:E13_spec_L1.
-  ?boulloterion ^crm:P140_assigned_attribute_to ?boulloterion__boulloterion_seal_assertion.
+  ?boulloterion__boulloterion__boulloterion_seal_assertion a star:E13_spec_L1.
+  ?boulloterion__boulloterion ^crm:P140_assigned_attribute_to ?boulloterion__boulloterion__boulloterion_seal_assertion.
   
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by a crm:E21_Person.
-    ?boulloterion__boulloterion_seal_assertion crm:P14_carried_out_by ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by a crm:E21_Person.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion crm:P14_carried_out_by ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by.
   
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_produced_seal a r11:Lead_Seal.
-    ?boulloterion__boulloterion_seal_assertion crm:P141_assigned ?boulloterion__boulloterion_seal_assertion__boulloterion_produced_seal.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_produced_seal a r11:Lead_Seal.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion crm:P141_assigned ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_produced_seal.
   
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5 a r11:Author_Group.
-    ?boulloterion__boulloterion_seal_assertion crm:P14_carried_out_by ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5 a r11:Author_Group.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion crm:P14_carried_out_by ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5.
     
       OPTIONAL {
-      ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5 a crm:E21_Person.
+      ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_by_6606a275376d5 a crm:E21_Person.
       }
     
   
-    ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_source a crm:E73_Information_Object.
-    ?boulloterion__boulloterion_seal_assertion crm:P17_was_motivated_by ?boulloterion__boulloterion_seal_assertion__boulloterion_seal_source.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_source a crm:E73_Information_Object.
+    ?boulloterion__boulloterion__boulloterion_seal_assertion crm:P17_was_motivated_by ?boulloterion__boulloterion__boulloterion_seal_assertion__boulloterion_seal_source.
   }
 
-  ?boulloterion crm:P3_has_note ?boulloterion__boulloterion_description.
+  ?boulloterion__boulloterion crm:P3_has_note ?boulloterion__boulloterion__boulloterion_description.
 }
 

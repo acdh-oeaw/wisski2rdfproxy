@@ -3,18 +3,19 @@ from rdfproxy import ConfigDict, SPARQLBinding
 from typing import Annotated
 
 
-class Person(BaseModel):
+class PersonStub_Person(BaseModel):
     model_config = ConfigDict(
         title="Person",
         model_bool="id",
         group_by="id",
     )
-    id: Annotated[AnyUrl | None, SPARQLBinding("person")] = Field(
+    id: Annotated[AnyUrl | None, SPARQLBinding("_person_stub__person")] = Field(
         default=None, exclude=False
     )
     person_appellation_assertion: Annotated[
-        list[AnyUrl], SPARQLBinding("person__person_appellation_assertion")
+        list[AnyUrl],
+        SPARQLBinding("_person_stub__person__person_appellation_assertion"),
     ]
     person_descriptive_name: Annotated[
-        list[str], SPARQLBinding("person__person_descriptive_name")
+        list[str], SPARQLBinding("_person_stub__person__person_descriptive_name")
     ]
