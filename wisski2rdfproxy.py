@@ -282,15 +282,15 @@ class Field:
                 )
                 raise RuntimeError(f"""recursive embedding in endpoint "{prefix[0]}":
 
-  {" -> ".join(prefix[start:start+i+1])}
+  {" -> ".join(prefix[start : start + i + 1])}
 
 starting at:
 
-  {"the endpoint's top-level entity" if start == 0 else ".".join(prefix[1:start+1])}
+  {"the endpoint's top-level entity" if start == 0 else ".".join(prefix[1 : start + 1])}
 
 At the very minimum, you probably want to exclude the following path from the endpoint:
    
-  {".".join(prefix[1:start+i+1])}.*""")
+  {".".join(prefix[1 : start + i + 1])}.*""")
             except StopIteration:
                 pass
 
@@ -299,7 +299,7 @@ At the very minimum, you probably want to exclude the following path from the en
         )
 
     def anchor(self):
-        return f'{"__".join(self.prefix)}'
+        return f"{'__'.join(self.prefix)}"
 
     def select(self):
         logger.debug(
@@ -429,7 +429,7 @@ class Type:
                     break
             if not exists:
                 logger.warning(
-                    f'unknown field specified in include/exclude list at {".".join(prefix[1:])}: {key}'
+                    f"unknown field specified in include/exclude list at {'.'.join(prefix[1:])}: {key}"
                 )
         return (c, split)
 
@@ -465,11 +465,11 @@ class Type:
         model = f"""class {self.classname()}(BaseModel):
 {args.indent}model_config = ConfigDict("""
         model += "\n".join(
-            f"{2*args.indent}{key} = {val}," for key, val in model_config.items()
+            f"{2 * args.indent}{key} = {val}," for key, val in model_config.items()
         )
 
         # model += f")\n{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding(\"{'__'.join(self.prefix)}\")] = None\n"
-        model += f")\n{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding(\"{'__'.join(self.prefix)}\")] = Field(default=None, exclude=True)\n"
+        model += f')\n{args.indent}id: Annotated[AnyUrl | None, SPARQLBinding("{"__".join(self.prefix)}")] = Field(default=None, exclude=False)\n'
 
         return model + ("\n".join(f"{args.indent}{f}" for f in self.fields) + "\n")
 
