@@ -9,13 +9,10 @@ import json
 import logging
 from os import getenv
 from os.path import basename
+import subprocess
 import sys
 import textwrap
 import xml.etree.ElementTree as ET
-
-import autopep8
-
-import isort
 
 sys.setrecursionlimit(100)
 
@@ -89,7 +86,7 @@ i.add_argument(
     "-ee",
     "--endpoint-exclude-fields",
     nargs="+",
-    metavar=("path_id", "exclude_field"),
+    metavar=("path_id[/endpoint/target/path]", "exclude_field"),
     action="append",
     help="a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.",
     default=[],
@@ -144,6 +141,7 @@ i.add_argument(
 i.add_argument(
     "-r",
     "--auto-limit-model-recursion",
+    metavar="recursion-limit",
     nargs="?",
     type=int,
     const=1,
@@ -176,7 +174,7 @@ i.add_argument(
 args = parser.parse_args()
 
 logging.basicConfig(
-    level=max(10, 30 - 10 * args.verbose), format="%(levelname)s: %(message)s"
+    level=max(10, 40 - 10 * args.verbose), format="%(levelname)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -515,9 +513,19 @@ def process_path(p):
     return p
 
 
+def split_path(pathid_endpointname):
+    try:
+        split = pathid_endpointname.index("/")
+        return (pathid_endpointname[:split], pathid_endpointname[split:])
+    except ValueError:
+        return (pathid_endpointname, pathid_endpointname)
+
+
 def write_python(io_obj, filename):
+    logger.info(f"writing {filename}")
     with open(filename, mode="w") as f:
-        print(isort.code(autopep8.fix_code(io_obj.getvalue())), file=f)
+        print(io_obj.getvalue(), file=f)
+    subprocess.run(["ruff", "format", filename])
 
 
 try:
@@ -577,9 +585,15 @@ try:
         logger.debug(
             f"endpoint {name} requires the following types: {[t.id for t in required_types]}"
         )
+        filename = name.replace("/", "_")
         with StringIO() if args.output_prefix else nullcontext(sys.stdout) as py:
+            query_file = (
+                f"{args.output_prefix}_{filename}.rq" if args.output_prefix else None
+            )
+            if args.output_prefix:
+                logger.info(f"writing query to {query_file}")
             with (
-                open(f"{args.output_prefix}_{name}.rq", "w")
+                open(query_file, "w")
                 if args.output_prefix
                 else nullcontext(sys.stdout) as rq
             ):
@@ -602,7 +616,7 @@ try:
                 rq.write("\n".join(t.bindings()))
                 rq.write("\n}\n\n")
             if args.output_prefix:
-                write_python(py, f"{args.output_prefix}_{name}.py")
+                write_python(py, f"{args.output_prefix}_{filename}.py")
 
         logger.info(
             f'Generated endpoint "{name}", consisting of {len(required_types)} nested model class(es)'
@@ -613,11 +627,23 @@ try:
             raise Exception(
                 f"endpoint '{n}' is defined using --endpoint-include-fields but is missing any fields to include"
             )
-    endpoints = {
-        n: paths[n].clone_exclude(fields) for n, *fields in args.endpoint_exclude_fields
-    } | {
-        n: paths[n].clone_include(fields) for n, *fields in args.endpoint_include_fields
-    }
+
+    endpoints = {}
+    for n, *fields in args.endpoint_exclude_fields:
+        path_id, endpoint_path = split_path(n)
+        if endpoint_path in endpoints:
+            raise RuntimeError(
+                f"Endpoint path {endpoint_path} is specified more than once"
+            )
+        endpoints[endpoint_path] = paths[path_id].clone_exclude(fields)
+
+    for n, *fields in args.endpoint_include_fields:
+        path_id, endpoint_path = split_path(n)
+        if endpoint_path in endpoints:
+            raise RuntimeError(
+                f"Endpoint path {endpoint_path} is specified more than once"
+            )
+        endpoints[endpoint_path] = paths[path_id].clone_include(fields)
 
     # write to files or stdout
     for name, endpoint_types in endpoints.items():
@@ -661,6 +687,9 @@ def version():
             )
 
             for name, root_type in endpoints.items():
+                filename = name.replace("/", "_")
+                if not name.startswith("/"):
+                    name = "/" + name
                 params_class = "QueryParameters"
                 # TODO set args.pagesize default
                 if args.custom_query_parameters:
@@ -668,12 +697,12 @@ def version():
                     py.write(
                         f"\n\nclass {params_class}(QueryParameters):\n{args.indent}pass"
                     )
-                py.write(f"""\n\nfrom {basename(args.output_prefix)}_{name} import {root_type.type.classname()}
-@app.get("/{name}")
-def {name}(params : Annotated[{params_class}, Query()]) -> Page[{root_type.type.classname()}]:
+                py.write(f"""\n\nfrom {basename(args.output_prefix)}_{filename} import {root_type.type.classname()}
+@app.get("{name}")
+def {filename}(params : Annotated[{params_class}, Query()]) -> Page[{root_type.type.classname()}]:
 {args.indent}adapter = SPARQLModelAdapter(
 {2 * args.indent}target="{args.api}",
-{2 * args.indent}query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{name}.rq").read().replace('\\n ', ' '),
+{2 * args.indent}query=open(f"{{path.dirname(path.realpath(__file__))}}/{basename(args.output_prefix)}_{filename}.rq").read().replace('\\n ', ' '),
 {2 * args.indent}model={root_type.type.classname()})
 {args.indent}return adapter.query(params)
 """)

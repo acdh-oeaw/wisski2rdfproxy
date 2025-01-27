@@ -21,12 +21,12 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
-                            [-ee path_id [exclude_field ...]]
+                            [-ee path_id[/endpoint/target/path] [exclude_field ...]]
                             [-ei path_id [include_field ...]] [-0]
                             [--cors [CORS ...]] [--custom-query-parameters]
                             [--pagesize PAGESIZE] [-o OUTPUT_PREFIX]
-                            [-a sparql_api_url] [-r [AUTO_LIMIT_MODEL_RECURSION]]
-                            [-i INDENT] [-ns prefix full_url]
+                            [-a sparql_api_url] [-r [recursion-limit]] [-i INDENT]
+                            [-ns prefix full_url]
 
 Generate rdfproxy models and queries from WissKI pathbuilder specifications
 
@@ -43,7 +43,7 @@ Endpoint/model options:
   specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).
   If no endpoints are given, lists all available types without generating any endpoints.
 
-  -ee path_id [exclude_field ...], --endpoint-exclude-fields path_id [exclude_field ...]
+  -ee path_id[/endpoint/target/path] [exclude_field ...], --endpoint-exclude-fields path_id[/endpoint/target/path] [exclude_field ...]
                         a path id for which to generate an endpoint, followed by 0 or
                         more field paths that should be excluded from the endpoint
                         return value. any fields not in this list will be included by
@@ -69,7 +69,7 @@ Output options:
                         also generate FastAPI routes for all endpoints at the
                         output_prefix location, pointing to the given SPARQL endpoint
                         URL
-  -r [AUTO_LIMIT_MODEL_RECURSION], --auto-limit-model-recursion [AUTO_LIMIT_MODEL_RECURSION]
+  -r [recursion-limit], --auto-limit-model-recursion [recursion-limit]
                         NOT IMPLEMENTED YET: automatically limit recursive model
                         embeddings to this many levels (off by default)
   -i INDENT, --indent INDENT
