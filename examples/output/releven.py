@@ -73,6 +73,21 @@ def boulloterion(params: Annotated[QueryParameters, Query()]) -> Page[Boulloteri
     return adapter.query(params)
 
 
+from releven__person_stub import Person
+
+
+@app.get("/person_stub")
+def _person_stub(params: Annotated[QueryParameters, Query()]) -> Page[Person]:
+    adapter = SPARQLModelAdapter(
+        target="https://graphdb.r11.eu/repositories/RELEVEN",
+        query=open(f"{path.dirname(path.realpath(__file__))}/releven__person_stub.rq")
+        .read()
+        .replace("\n ", " "),
+        model=Person,
+    )
+    return adapter.query(params)
+
+
 from releven_person import Person
 
 

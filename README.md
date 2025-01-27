@@ -4,10 +4,8 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 
 ### TODOs / missing implementation
 
-- [ ] add option to name endpoints ([#1](https://github.com/acdh-oeaw/wisski2rdfproxy/issues/1))
 - [ ] add support for reverse-traversal of paths (especially across `entity_reference` boundaries)
-- [ ] allow `cardinality=1` model fields to be specified as optional
-- [ ] assure that binding variable names within queries are actually unique
+- [ ] ensure that binding variable names within queries are actually unique
 - [ ] add support for limited-level `.*.*[...]` to `--endpoint_include_fields`
 - [ ] implement auto-limiting of recursive embeddings
 - [ ] if there is a partial match for an entity in the triple store which is missing some mandatory field, that partial entity will (erroneously) show up in any endpoint which excludes the mandatory field

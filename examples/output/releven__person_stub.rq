@@ -1,0 +1,25 @@
+PREFIX crm: <http://www.cidoc-crm.org/cidoc-crm/>
+PREFIX lrmoo: <http://iflastandards.info/ns/lrm/lrmoo/>
+PREFIX star: <https://r11.eu/ns/star/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX r11: <https://r11.eu/ns/spec/>
+PREFIX r11pros: <https://r11.eu/ns/prosopography/>
+
+SELECT
+?person
+  ?person__person_appellation_assertion
+  ?person__person_descriptive_name
+
+WHERE {
+?person a crm:E21_Person.
+
+  OPTIONAL {
+  ?person__person_appellation_assertion a star:E13_crm_P1.
+  ?person ^crm:P140_assigned_attribute_to ?person__person_appellation_assertion.
+  }
+
+  OPTIONAL {
+  ?person crm:P3_has_note ?person__person_descriptive_name.
+  }
+}
+
