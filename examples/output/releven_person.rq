@@ -6,82 +6,82 @@ PREFIX r11: <https://r11.eu/ns/spec/>
 PREFIX r11pros: <https://r11.eu/ns/prosopography/>
 
 SELECT
-?person__person
-  ?person__person__person_id_assignment
-  ?person__person__person_appellation_assertion
-  ?person__person__person_gender_assertion
-  ?person__person__person_ethnicity_assertion
-  ?person__person__person_descriptive_name
-  ?person__person__person_possession_assertion
-  ?person__person__person_status_assertion
-  ?person__person__person_religion_assertion
-  ?person__person__person_occupation_assertion
-  ?person__person__person_language_assertion
-  ?person__person__person_kinship_assertion
-  ?person__person__birth_circumstances_claim
-  ?person__person__person_death_assertion
+?Person
+  ?Person__person_id_assignment
+  ?Person__person_appellation_assertion
+  ?Person__person_gender_assertion
+  ?Person__person_ethnicity_assertion
+  ?Person__person_descriptive_name
+  ?Person__person_possession_assertion
+  ?Person__person_status_assertion
+  ?Person__person_religion_assertion
+  ?Person__person_occupation_assertion
+  ?Person__person_language_assertion
+  ?Person__person_kinship_assertion
+  ?Person__birth_circumstances_claim
+  ?Person__person_death_assertion
 
 WHERE {
-?person__person a crm:E21_Person.
+?Person a crm:E21_Person.
 
   OPTIONAL {
-  ?person__person__person_id_assignment a crm:E15_Identifier_Assignment.
-  ?person__person ^crm:P140_assigned_attribute_to ?person__person__person_id_assignment.
+  ?Person__person_id_assignment a crm:E15_Identifier_Assignment.
+  ?Person ^crm:P140_assigned_attribute_to ?Person__person_id_assignment.
   }
 
   OPTIONAL {
-  ?person__person__person_appellation_assertion a star:E13_crm_P1.
-  ?person__person ^crm:P140_assigned_attribute_to ?person__person__person_appellation_assertion.
+  ?Person__person_appellation_assertion a star:E13_crm_P1.
+  ?Person ^crm:P140_assigned_attribute_to ?Person__person_appellation_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_gender_assertion a star:E13_crm_P41.
-  ?person__person ^crm:P141_assigned ?person__person__person_gender_assertion.
+  ?Person__person_gender_assertion a star:E13_crm_P41.
+  ?Person ^crm:P141_assigned ?Person__person_gender_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_ethnicity_assertion a star:E13_crm_P107.
-  ?person__person ^crm:P141_assigned ?person__person__person_ethnicity_assertion.
+  ?Person__person_ethnicity_assertion a star:E13_crm_P107.
+  ?Person ^crm:P141_assigned ?Person__person_ethnicity_assertion.
   }
 
   OPTIONAL {
-  ?person__person crm:P3_has_note ?person__person__person_descriptive_name.
+  ?Person crm:P3_has_note ?Person__person_descriptive_name.
   }
 
   OPTIONAL {
-  ?person__person__person_possession_assertion a star:E13_crm_P51.
-  ?person__person ^crm:P141_assigned ?person__person__person_possession_assertion.
+  ?Person__person_possession_assertion a star:E13_crm_P51.
+  ?Person ^crm:P141_assigned ?Person__person_possession_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_status_assertion a star:E13_sdhss_P26.
-  ?person__person ^crm:P141_assigned ?person__person__person_status_assertion.
+  ?Person__person_status_assertion a star:E13_sdhss_P26.
+  ?Person ^crm:P141_assigned ?Person__person_status_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_religion_assertion a star:E13_sdhss_P36.
-  ?person__person ^crm:P141_assigned ?person__person__person_religion_assertion.
+  ?Person__person_religion_assertion a star:E13_sdhss_P36.
+  ?Person ^crm:P141_assigned ?Person__person_religion_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_occupation_assertion a star:E13_sdhss_P13.
-  ?person__person ^crm:P141_assigned ?person__person__person_occupation_assertion.
+  ?Person__person_occupation_assertion a star:E13_sdhss_P13.
+  ?Person ^crm:P141_assigned ?Person__person_occupation_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_language_assertion a star:E13_sdhss_P38.
-  ?person__person ^crm:P140_assigned_attribute_to ?person__person__person_language_assertion.
+  ?Person__person_language_assertion a star:E13_sdhss_P38.
+  ?Person ^crm:P140_assigned_attribute_to ?Person__person_language_assertion.
   }
 
   OPTIONAL {
-  ?person__person__person_kinship_assertion a star:E13_sdhss_P17.
-  ?person__person ^crm:P141_assigned ?person__person__person_kinship_assertion.
+  ?Person__person_kinship_assertion a star:E13_sdhss_P17.
+  ?Person ^crm:P141_assigned ?Person__person_kinship_assertion.
   }
 
-  ?person__person__birth_circumstances_claim a star:E13_crm_P98.
-  ?person__person ^crm:P141_assigned ?person__person__birth_circumstances_claim.
+  ?Person__birth_circumstances_claim a star:E13_crm_P98.
+  ?Person ^crm:P141_assigned ?Person__birth_circumstances_claim.
 
-  ?person__person__person_death_assertion a star:E13_crm_P100.
-  ?person__person ^crm:P141_assigned ?person__person__person_death_assertion.
+  ?Person__person_death_assertion a star:E13_crm_P100.
+  ?Person ^crm:P141_assigned ?Person__person_death_assertion.
 }
 

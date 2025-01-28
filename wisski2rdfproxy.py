@@ -95,7 +95,7 @@ i.add_argument(
     "-ei",
     "--endpoint-include-fields",
     nargs="+",
-    metavar=("path_id", "include_field"),
+    metavar=("path_id[/endpoint/target/path]", "include_field"),
     action="append",
     help="a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.",
     default=[],
@@ -112,7 +112,7 @@ i.add_argument(
     "--cors",
     nargs="*",
     default=["*"],
-    help="allow CORS requests from these origins (default: $(default)s)",
+    help="allow CORS requests from these origins (default: %(default)s)",
 )
 i.add_argument(
     "--custom-query-parameters",
@@ -124,7 +124,7 @@ i.add_argument(
     "--pagesize",
     type=int,
     default=10,
-    help="default page-size of the generated endpoints (default: $(default)s)",
+    help="default page-size of the generated endpoints (default: %(default)s)",
 )
 i.add_argument(
     "-o",
@@ -185,6 +185,19 @@ def parse_filter_list(ls):
     return {p: [r[1] for r in split if r[0] == p and len(r) > 1] for p in prefixes}
 
 
+def split_path(path):
+    return path.lstrip("/").split("/")
+
+
+def path2camelcase(path):
+    # or .title() on spaced string
+    return "".join([s.capitalize() for s in split_path(path)])
+
+
+def path2filename(path):
+    return "_".join(split_path(path))
+
+
 wisski_type_map = {
     # TODO add support for all Wisski field types: https://wiss-ki.eu/documentation/pathbuilder/configuration/lists
     "string": "str",
@@ -231,16 +244,16 @@ class Field:
             collection = n.nested_types(collection)
         return collection
 
-    def prepare_clone(self, prefix):
+    def prepare_clone(self, prefix, name):
         logger.debug(
-            f"cloning field {self.name} (type {self.type}) with field prefix {prefix}"
+            f"cloning field {self.name} (type {self.type}) with field prefix {prefix} as {name or self.name}"
         )
         f = copy.copy(self)
-        f.prefix = prefix + [self.name]
+        f.prefix = prefix + [name or self.name]
         return f
 
-    def clone_exclude(self, exclude, prefix=[]):
-        f = self.prepare_clone(prefix)
+    def clone_exclude(self, exclude, prefix=[], name=None):
+        f = self.prepare_clone(prefix, name)
         if isinstance(self.type, Type):
             if "*" in exclude:
                 logger.debug("all fields of this should be excluded")
@@ -254,8 +267,8 @@ class Field:
                 self.handle_recursion(prefix)
         return f
 
-    def clone_include(self, include, prefix=[]):
-        f = self.prepare_clone(prefix)
+    def clone_include(self, include, prefix=[], name=None):
+        f = self.prepare_clone(prefix, name)
         if isinstance(self.type, Type):
             if include == []:
                 logger.debug(
@@ -513,7 +526,7 @@ def process_path(p):
     return p
 
 
-def split_path(pathid_endpointname):
+def parse_endpointspec(pathid_endpointname):
     try:
         split = pathid_endpointname.index("/")
         return (pathid_endpointname[:split], pathid_endpointname[split:])
@@ -585,7 +598,7 @@ try:
         logger.debug(
             f"endpoint {name} requires the following types: {[t.id for t in required_types]}"
         )
-        filename = name.replace("/", "_")
+        filename = path2filename(name)
         with StringIO() if args.output_prefix else nullcontext(sys.stdout) as py:
             query_file = (
                 f"{args.output_prefix}_{filename}.rq" if args.output_prefix else None
@@ -630,23 +643,23 @@ try:
 
     endpoints = {}
     for n, *fields in args.endpoint_exclude_fields:
-        path_id, endpoint_path = split_path(n)
+        path_id, endpoint_path = parse_endpointspec(n)
         if endpoint_path in endpoints:
             raise RuntimeError(
                 f"Endpoint path {endpoint_path} is specified more than once"
             )
         endpoints[endpoint_path] = paths[path_id].clone_exclude(
-            fields, [endpoint_path.replace("/", "_")]
+            fields, name=path2camelcase(endpoint_path)
         )
 
     for n, *fields in args.endpoint_include_fields:
-        path_id, endpoint_path = split_path(n)
+        path_id, endpoint_path = parse_endpointspec(n)
         if endpoint_path in endpoints:
             raise RuntimeError(
                 f"Endpoint path {endpoint_path} is specified more than once"
             )
         endpoints[endpoint_path] = paths[path_id].clone_include(
-            fields, [endpoint_path.replace("/", "_")]
+            fields, name=path2camelcase(endpoint_path)
         )
 
     # write to files or stdout
@@ -691,7 +704,7 @@ def version():
             )
 
             for name, root_type in endpoints.items():
-                filename = name.replace("/", "_")
+                filename = path2filename(name)
                 if not name.startswith("/"):
                     name = "/" + name
                 params_class = "QueryParameters"

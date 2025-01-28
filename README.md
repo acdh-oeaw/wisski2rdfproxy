@@ -20,8 +20,8 @@ A command-line tool for generating [rdfproxy](https://github.com/acdh-oeaw/rdfpr
 ```
 usage: ./wisski2rdfproxy.py [-h] [-v] [-j wisski_api_export | -x wisski_path_xml]
                             [-ee path_id[/endpoint/target/path] [exclude_field ...]]
-                            [-ei path_id [include_field ...]] [-0]
-                            [--cors [CORS ...]] [--custom-query-parameters]
+                            [-ei path_id[/endpoint/target/path] [include_field ...]]
+                            [-0] [--cors [CORS ...]] [--custom-query-parameters]
                             [--pagesize PAGESIZE] [-o OUTPUT_PREFIX]
                             [-a sparql_api_url] [-r [recursion-limit]] [-i INDENT]
                             [-ns prefix full_url]
@@ -46,7 +46,7 @@ Endpoint/model options:
                         more field paths that should be excluded from the endpoint
                         return value. any fields not in this list will be included by
                         default.
-  -ei path_id [include_field ...], --endpoint-include-fields path_id [include_field ...]
+  -ei path_id[/endpoint/target/path] [include_field ...], --endpoint-include-fields path_id[/endpoint/target/path] [include_field ...]
                         a path id for which to generate an endpoint, followed by 1 or
                         more field paths that should be included in the endpoint
                         return value.
@@ -54,11 +54,10 @@ Endpoint/model options:
 Output options:
   -0, --everything-optional
                         make all Wisski elements with cardinality=1 optional
-  --cors [CORS ...]     allow CORS requests from these origins (default: $(default)s)
+  --cors [CORS ...]     allow CORS requests from these origins (default: ['*'])
   --custom-query-parameters
                         Whether to create a QueryParameters class for every endpoint
-  --pagesize PAGESIZE   default page-size of the generated endpoints (default:
-                        $(default)s)
+  --pagesize PAGESIZE   default page-size of the generated endpoints (default: 10)
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
                         file prefix for the python model and SPARQL query fields that
                         will be generated for each endpoint (default: print both to
