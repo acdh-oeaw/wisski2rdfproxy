@@ -1,0 +1,4 @@
+# WissKAS 🐾
+
+WissKI Adapter Serialization
+

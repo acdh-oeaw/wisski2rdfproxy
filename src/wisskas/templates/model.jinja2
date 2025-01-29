@@ -1,0 +1,24 @@
+from pydantic import AnyUrl, BaseModel, Field  # noqa: F401
+from rdfproxy import ConfigDict, SPARQLBinding
+from typing import Annotated
+
+{% for classname, class in classes.items() -%}
+class {{ classname }}(BaseModel):
+    {%- if description %}
+        """
+        {{ description | indent(4) }}
+        """
+    {%- endif %}
+    model_config = ConfigDict()
+{% for fieldname, field in class.fields.items() -%}
+    {%- if field.binding %}
+    {{ fieldname }}: Annotated[
+      {{ field.type }},
+      SPARQLBinding("{{ field.binding }}"),
+    ] = None
+    {%- else %}
+    {{ fieldname }}: {{ field.type }}
+    {%- endif %}
+
+{% endfor -%}
+{% endfor -%}
