@@ -2,23 +2,49 @@ from pydantic import AnyUrl, BaseModel, Field  # noqa: F401
 from rdfproxy import ConfigDict, SPARQLBinding
 from typing import Annotated
 
-{% for classname, class in classes.items() -%}
-class {{ classname }}(BaseModel):
+{%- macro model(class) -%}
+  {%- for child in class.fields.values() -%}
+    {% if child.is_group -%}
+      {{- model(child) -}}
+    {%- endif -%}
+  {% endfor %}
+
+class {{ class.class_name }}(BaseModel):
     {%- if description %}
         """
         {{ description | indent(4) }}
         """
     {%- endif %}
-    model_config = ConfigDict()
-{% for fieldname, field in class.fields.items() -%}
+    model_config = ConfigDict(
+        title="TODO",
+    )
+{% for fieldname, field in class.fields.items() %}
+    {{ fieldname ~ ": "}}
+    {%- if field.binding -%}
+    Annotated[
+    {%- endif -%}
+    {%- if field.cardinality == -1 -%}
+    list[
+    {%- endif -%}
+    {%- if field.type -%}
+    {{- field.type -}}
+    {%- elif field.class_name -%}
+    {{ field.class_name }}
+    {%- elif field.field_type == "entity_reference" -%}
+    TODO
+    {%- else -%}
+    ????
+    {% endif %}
+    {%- if field.cardinality == -1 -%}
+    ]
+    {%- endif -%}
     {%- if field.binding %}
-    {{ fieldname }}: Annotated[
-      {{ field.type }},
       SPARQLBinding("{{ field.binding }}"),
     ] = None
-    {%- else %}
-    {{ fieldname }}: {{ field.type }}
-    {%- endif %}
+    {%- endif -%}
 
-{% endfor -%}
-{% endfor -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{{ model(root) }}
+

@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "jinja2>=3.1.5",
+    "lxml>=5.3.0",
     "rdfproxy",
 ]
 

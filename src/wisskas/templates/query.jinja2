@@ -1,0 +1,22 @@
+{%- for prefix, uri in prefixes.items() -%}
+PREFIX {{ prefix }}: <{{ uri }}>
+{% endfor -%}
+
+{%- macro vars(class, depth=0) -%}
+  {% for name, child in class.fields.items() %}
+    {{ child.id | indent(4*depth, True) }},
+    {{- vars(child, depth+1) -}}
+  {% endfor %}
+{%- endmacro -%}
+
+{%- macro where(class, depth=0) -%}
+  {% for name, child in class.fields.items() %}
+    {{- where(child, depth+1) -}}
+  {% endfor %}
+{%- endmacro %}
+
+SELECT
+{{- vars(root) }}
+WHERE {
+  {{ where(root) }}
+}
