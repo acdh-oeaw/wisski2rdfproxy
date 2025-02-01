@@ -1,0 +1,21 @@
+no endpoints specified. here are all {{ paths | length }} WissKI path ids that endpoints could be generated for:
+
+{% macro display(path, depth=0) %}
+ {{ ('- ' ~ path.id) | indent(2*depth, True) }}
+ {%- if path.type -%}
+   : {{ path.type }}
+ {%- elif path.group_id == 0 -%}
+ {{ ' [ ' ~ path.path_array | last }} ]
+ {%- elif path.fieldtype == 'entity_reference' -%}
+   {{ ' [ -> ' ~ path.path_array | last }} ]
+ {%- endif %}
+ {%- for name, child in path.fields | dictsort %}
+   {{- display(child, depth+1) -}}
+ {% endfor %}
+{%- endmacro -%}
+
+
+{% for path in paths.values() | selectattr('group_id', '==', 0) | sort(attribute='id') %}
+  {{- display(path)}}
+{% endfor %}
+

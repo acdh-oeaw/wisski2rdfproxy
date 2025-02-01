@@ -51,6 +51,8 @@ def nest_paths(paths):
                 try:
                     path["reference"] = root_types[path["path_array"][-1]]
                     path["reference"]["parents"][path["id"]] = path
+                    # path["fields"] = path["reference"]["fields"]
+                    # path["is_group"] = 1
                 except KeyError as e:
                     logging.warning(
                         f"path {path['id']} is an entity_reference, but no known path for target CRM class {e}"

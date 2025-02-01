@@ -2,10 +2,18 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 env = Environment(loader=PackageLoader("wisskas"), autoescape=select_autoescape())
 
+# add support for any/all filters
+env.filters["any"] = any
+env.filters["all"] = all
+
 
 def serialize(template_name, **kwargs):
     template = env.get_template(f"{template_name}.jinja2")
     return template.render(**kwargs)
+
+
+def serialize_entrypoint(endpoints):
+    return serialize("entrypoint", **{"endpoints": endpoints})
 
 
 def serialize_model(root):

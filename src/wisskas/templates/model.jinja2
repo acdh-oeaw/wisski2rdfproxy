@@ -3,9 +3,9 @@ from rdfproxy import ConfigDict, SPARQLBinding
 from typing import Annotated
 
 {%- macro model(class) -%}
-  {%- for child in class.fields.values() -%}
-    {% if child.is_group -%}
-      {{- model(child) -}}
+  {%- for field in class.fields.values() -%}
+    {% if field.is_group -%}
+      {{- model(field) -}}
     {%- endif -%}
   {% endfor %}
 
@@ -16,7 +16,10 @@ class {{ class.class_name }}(BaseModel):
         """
     {%- endif %}
     model_config = ConfigDict(
-        title="TODO",
+        title="{{ class.name }}",
+        {%- if class.fields.values() | map(attribute='cardinality') | select('equalto', -1) | first %}
+        group_by="TODO"
+        {%- endif %}
     )
 {% for fieldname, field in class.fields.items() %}
     {{ fieldname ~ ": "}}
@@ -30,8 +33,6 @@ class {{ class.class_name }}(BaseModel):
     {{- field.type -}}
     {%- elif field.class_name -%}
     {{ field.class_name }}
-    {%- elif field.field_type == "entity_reference" -%}
-    TODO
     {%- else -%}
     ????
     {% endif %}

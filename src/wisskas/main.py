@@ -1,7 +1,14 @@
 import argparse
 import logging
 
-from wisskas.serialize import serialize_model, serialize_query
+from wisskas.filter import clone_exclude, clone_include
+from wisskas.serialize import (
+    serialize,
+    serialize_entrypoint,
+    serialize_model,
+    serialize_query,
+)
+from wisskas.string_utils import parse_endpointspec, path_to_camelcase
 from wisskas.wisski import parse_paths
 
 parser = argparse.ArgumentParser()
@@ -34,6 +41,23 @@ endpoint_parser.add_argument(
         ["r11pros", "https://r11.eu/ns/prosopography/"],
     ],
 )
+
+endpoint_parser.add_argument(
+    "-ee",
+    "--endpoint-exclude-fields",
+    nargs="+",
+    metavar=("path_id[/endpoint/target/path]", "exclude_field"),
+    action="append",
+    help="a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.",
+    default=[
+        [
+            "publication/pub/list",
+            "publication_text_assertion",
+            "publication_creation.publication_creation_event.*",
+        ]
+    ],
+)
+
 endpoint_parser.add_argument(
     "-ei",
     "--endpoint-include-fields",
@@ -41,7 +65,7 @@ endpoint_parser.add_argument(
     metavar=("path_id[/endpoint/target/path]", "include_field"),
     action="append",
     help="a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.",
-    default=[["publication"]],
+    default=[],
 )
 
 parser.add_argument(
@@ -61,20 +85,45 @@ logging.basicConfig(
 
 root_types, paths = parse_paths(args.input)
 
-for path_id, *filters in args.endpoint_include_fields:
-    # TODO filter
+endpoints = {}
 
-    model = serialize_model(paths[path_id])
-    query = serialize_query(paths[path_id], args.prefix)
+for path_id, *filters in args.endpoint_include_fields:
+    if len(filters) == 0:
+        raise Exception(
+            f"endpoint '{path_id}' is defined using --endpoint-include-fields but is missing any fields to include"
+        )
+    path_id, endpoint_path = parse_endpointspec(path_id)
+
+    if endpoint_path in endpoints:
+        raise RuntimeError(f"Endpoint path {endpoint_path} is specified more than once")
+    endpoints[endpoint_path] = clone_include(
+        paths[path_id], filters, [path_to_camelcase(endpoint_path)]
+    )
+
+for path_id, *filters in args.endpoint_exclude_fields:
+    path_id, endpoint_path = parse_endpointspec(path_id)
+
+    if endpoint_path in endpoints:
+        raise RuntimeError(f"Endpoint path {endpoint_path} is specified more than once")
+    endpoints[endpoint_path] = clone_exclude(
+        paths[path_id], filters, [path_to_camelcase(endpoint_path)]
+    )
+
+if len(endpoints) == 0:
+    print(serialize("pathinfo", paths=paths))
+
+else:
+    for path in endpoints.values():
+        model = serialize_model(path)
+        query = serialize_query(path)
+
+        if args.output:
+            # TODO write to file(s)
+            pass
+
+        else:
+            print(model)
+            print(query)
 
     if args.output:
-        # TODO write to file(s)
-        pass
-
-    else:
-        print(model)
-        print(query)
-
-if args.output:
-    # TODO write fastapi entry point
-    pass
+        print(serialize_entrypoint(endpoints))
