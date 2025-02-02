@@ -69,6 +69,13 @@ endpoint_parser.add_argument(
 )
 
 parser.add_argument(
+    "--cors",
+    nargs="*",
+    default=["*"],
+    help="allow CORS requests from these origins (default: %(default)s)",
+)
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",
@@ -116,6 +123,7 @@ else:
     for path in endpoints.values():
         model = serialize_model(path)
         query = serialize_query(path)
+        entrypoint = serialize_entrypoint(endpoints, {"origins": args.cors})
 
         if args.output:
             # TODO write to file(s)
@@ -124,6 +132,4 @@ else:
         else:
             print(model)
             print(query)
-
-    if args.output:
-        print(serialize_entrypoint(endpoints))
+            print(entrypoint)

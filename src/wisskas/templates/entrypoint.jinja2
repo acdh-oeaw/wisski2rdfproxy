@@ -1,21 +1,22 @@
 from fastapi import FastAPI, Query
+from git import Repo
 from os import path
 from rdfproxy import Page, QueryParameters, SPARQLModelAdapter
 from typing import Annotated
 
 app = FastAPI()
 
+{% if cors %}
 from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins={{ cors.origins | default(["*"], true) }},
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods={{ cors.methods | default(["*"], true) }},
+    allow_headers={{ cors.headers | default(["*"], true) }},
 )
-from git import Repo
-
+{% endif %}
 
 # The automatic health check endpoint is /. The return code has to be 200 or 30x.
 @app.get("/")
