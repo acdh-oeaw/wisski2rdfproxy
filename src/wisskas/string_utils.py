@@ -2,9 +2,15 @@ FILTER_PATH_SEPARATOR = "."
 FILTER_PATH_INVERSION = "^"
 
 
-def create_names(prefix, postfix, used_names=[], n=1):
+def create_names(
+    prefix: str | list[str], postfix: str, used_names=set(), n=1
+) -> list[str]:
     # TODO check if already in used_names
-    return f"{prefix}_{postfix}"
+    return (
+        []
+        if n == 0
+        else [*(f"{prefix}_{i}_{postfix}" for i in range(n - 1)), f"{prefix}_{postfix}"]
+    )
 
 
 def id_to_classname(path_id) -> str:

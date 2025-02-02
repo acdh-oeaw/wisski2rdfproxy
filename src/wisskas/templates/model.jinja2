@@ -18,7 +18,7 @@ class {{ class.class_name }}(BaseModel):
     model_config = ConfigDict(
         title="{{ class.name }}",
         {%- if class.fields.values() | map(attribute='cardinality') | select('equalto', -1) | first %}
-        group_by="TODO"
+        group_by="{{class.binding}}"
         {%- endif %}
     )
 {% for fieldname, field in class.fields.items() %}

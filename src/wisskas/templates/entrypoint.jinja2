@@ -24,16 +24,17 @@ def version():
     repo = Repo(search_parent_directories=True)
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
-from releven_location import Location_Location as foo
+{% for url, endpoint in endpoints.items() %}
+from {{ endpoint.filename }} import {{ endpoint.class_name }}
 
-@app.get("/location")
-def location(params: Annotated[QueryParameters, Query()]) -> Page[foo]:
+@app.get("/{{ url }}")
+def location(params: Annotated[QueryParameters, Query()]) -> Page[{{ endpoint.class_name }}]:
     adapter = SPARQLModelAdapter(
-        target="https://graphdb.r11.eu/repositories/RELEVEN",
-        query=open(f"{path.dirname(path.realpath(__file__))}/releven_location.rq")
+        target="{{ backend_address }}",
+        query=open(f"{path.dirname(path.realpath(__file__))}/{{ endpoint.filename }}.rq")
         .read()
         .replace("\n ", " "),
-        model=foo,
+        model={{ endpoint.class_name }},
     )
     return adapter.query(params)
-
+{% endfor %}

@@ -1,23 +1,41 @@
 {%- for prefix, uri in prefixes.items() -%}
 PREFIX {{ prefix }}: <{{ uri }}>
-{% endfor -%}
+{% endfor %}
 
-{%- macro vars(class, depth=0) -%}
+{% macro select(class, depth=0) -%}
+  {{ class.binding_vars[-1] | indent(4*depth, true) }},
   {% for name, child in class.fields.items() %}
-    {{ child.id | indent(4*depth, True) }},
-    {{- vars(child, depth+1) -}}
+    {{- select(child, depth+1) -}}
   {% endfor %}
 {%- endmacro -%}
 
+{%- macro apply_prefixes(path) -%}
+  {% set ns = namespace(path=path) %}
+  {%- for prefix, uri in prefixes.items() -%}
+    {% set ns.path = (ns.path | replace(uri, prefix ~ ':')) %}
+  {%- endfor -%}
+  {{- ns.path -}}
+{%- endmacro -%}
+
 {%- macro where(class, depth=0) -%}
-  {% for name, child in class.fields.items() %}
-    {# TODO #}
-    {{- where(child, depth+1) -}}
-  {% endfor %}
-{%- endmacro %}
+  {%- for path in class.path_array -%}
+    {%- if class.binding_vars[loop.index0] is not none -%}
+      {%- if loop.index0 is even -%}
+        ?{{ class.binding_vars[loop.index0] }} a {{ apply_prefixes(path) }}.
+      {% else -%}
+        ?{{ class.binding_vars[loop.index0] }} {{ apply_prefixes(path) }} ?{{ class.binding_vars[loop.index0 + 1] }}.
+      {% endif %}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- for name, child in class.fields.items() -%}
+    {{- where(child, depth+1) | indent(2*depth, true) -}}
+
+  {%- endfor -%}
+
+{%- endmacro -%}
 
 SELECT
-{{- vars(root) }}
+{{ select(root) }}
 WHERE {
-  {{ where(root) }}
+{{ where(root) }}
 }

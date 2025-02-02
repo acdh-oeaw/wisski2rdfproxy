@@ -1,7 +1,10 @@
 import argparse
 import logging
 
-from wisskas.filter import clone_exclude, clone_include
+from wisskas.filter import (
+    endpoint_exclude_fields,
+    endpoint_include_fields,
+)
 from wisskas.serialize import (
     serialize,
     serialize_entrypoint,
@@ -69,6 +72,14 @@ endpoint_parser.add_argument(
 )
 
 parser.add_argument(
+    "-a",
+    "--server-address",
+    metavar="sparql_api_url",
+    default="https://graphdb.r11.eu/repositories/RELEVEN",
+    help="also generate FastAPI routes for all endpoints at the output_prefix location, pointing to the given SPARQL endpoint URL",
+)
+
+parser.add_argument(
     "--cors",
     nargs="*",
     default=["*"],
@@ -103,8 +114,8 @@ for path_id, *filters in args.endpoint_include_fields:
 
     if endpoint_path in endpoints:
         raise RuntimeError(f"Endpoint path {endpoint_path} is specified more than once")
-    endpoints[endpoint_path] = clone_include(
-        paths[path_id], filters, [path_to_camelcase(endpoint_path)]
+    endpoints[endpoint_path] = endpoint_include_fields(
+        paths[path_id], filters, path_to_camelcase(endpoint_path)
     )
 
 for path_id, *filters in args.endpoint_exclude_fields:
@@ -112,8 +123,10 @@ for path_id, *filters in args.endpoint_exclude_fields:
 
     if endpoint_path in endpoints:
         raise RuntimeError(f"Endpoint path {endpoint_path} is specified more than once")
-    endpoints[endpoint_path] = clone_exclude(
-        paths[path_id], filters, [path_to_camelcase(endpoint_path)]
+    endpoints[endpoint_path] = endpoint_exclude_fields(
+        paths[path_id],
+        filters,
+        path_to_camelcase(endpoint_path),
     )
 
 if len(endpoints) == 0:
@@ -122,10 +135,12 @@ if len(endpoints) == 0:
 else:
     for path in endpoints.values():
         model = serialize_model(path)
-        query = serialize_query(path)
-        entrypoint = serialize_entrypoint(endpoints, {"origins": args.cors})
+        query = serialize_query(path, args.prefix)
+        entrypoint = serialize_entrypoint(
+            endpoints, args.server_address, {"origins": args.cors}
+        )
 
-        if args.output:
+        if args.output and args.server_address:
             # TODO write to file(s)
             pass
 
