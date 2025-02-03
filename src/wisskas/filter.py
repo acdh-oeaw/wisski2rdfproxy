@@ -10,15 +10,13 @@ from wisskas.wisski import WISSKI_TYPES
 
 
 def endpoint_exclude_fields(root, exclude, root_classname=None):
-    # TODO create dummy root class
     dummy = {"path_array": [], "fields": {root_classname: root}}
     return clone_exclude(dummy, root_classname, exclude)
 
 
 def endpoint_include_fields(root, include, root_classname=None):
-    # TODO create dummy root class
     dummy = {"path_array": [], "fields": {root_classname: root}}
-    return clone_exclude(dummy, root_classname, include)
+    return clone_include(dummy, root_classname, include)
 
 
 def handle_recursion(prefix):
@@ -85,23 +83,24 @@ def create_clone(parent, fieldname, filterspec, prefix, used_names):
                 break
         if not exists:
             logging.warning(
-                f"unknown field specified in include/exclude list at {FILTER_PATH_SEPARATOR.join(prefix[1:])}: {key}"
+                f"unknown field specified in include/exclude list at {FILTER_PATH_SEPARATOR.join(prefix[1:]) or clone['id']}: {key}"
             )
     return (clone, filters)
 
 
 def clone_exclude(parent, fieldname, exclude, prefix=[], used_names=set()):
     clone, excludes = create_clone(parent, fieldname, exclude, prefix, used_names)
-    # TODO set binding_var and path_vars
+    logging.debug(f"{clone['id']}: exclude {excludes}")
     if "*" in exclude:
-        logging.debug("all fields of this should be excluded")
         clone["type"] = WISSKI_TYPES["uri"]
         clone["fields"] = {}
         # clone.datatype_property = None
         return clone
     try:
         clone["fields"] = {
-            name: clone_exclude(clone, name, excludes.get(f["id"], []), prefix)
+            name: clone_exclude(
+                clone, name, excludes.get(f["id"], []), prefix, used_names
+            )
             for name, f in clone["fields"].items()
             if excludes.get(f["id"], None) != []
         }
@@ -112,4 +111,18 @@ def clone_exclude(parent, fieldname, exclude, prefix=[], used_names=set()):
 
 def clone_include(parent, fieldname, include, prefix=[], used_names=set()):
     clone, includes = create_clone(parent, fieldname, include, prefix, used_names)
+    logging.debug(f"{clone['id']}: include {includes}")
+    if "**" in include:
+        clone["fields"] = {
+            name: clone_include(clone, name, ["**"], prefix, used_names)
+            for name in clone["fields"].keys()
+        }
+    else:
+        clone["fields"] = {
+            name: clone_include(clone, name, includes.get(name, []), prefix, used_names)
+            for name in clone["fields"].keys()
+            if "*" in include or name in includes
+        }
+    if len(clone["fields"]) == 0:
+        clone["type"] = WISSKI_TYPES["uri"]
     return clone
