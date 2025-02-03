@@ -169,11 +169,15 @@ else:
             f.write(content)
 
     for path, root in endpoints.items():
+        filename = f"{args.output_prefix or ''}_{path_to_filename(path)}"
+
+        # this is the local filename
+        root["filename"] = filename.rsplit("/", 1)[-1]
+
         model = serialize_model(root)
         query = serialize_query(root, args.prefix)
 
         if args.output_prefix:
-            filename = f"{args.output_prefix}_{path_to_filename(path)}"
             dump_to_file(model, f"{filename}.py")
             dump_to_file(query, f"{filename}.rq")
 

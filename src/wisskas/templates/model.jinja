@@ -40,7 +40,7 @@ class {{ class.class_name }}(BaseModel):
     ]
     {%- endif -%}
     {%- if field.binding %}
-      SPARQLBinding("{{ field.binding }}"),
+      , SPARQLBinding("{{ field.binding }}"),
     ] = None
     {%- endif -%}
 
