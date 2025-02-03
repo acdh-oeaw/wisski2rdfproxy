@@ -3,7 +3,7 @@ PREFIX {{ prefix }}: <{{ uri }}>
 {% endfor %}
 
 {% macro select(class, depth=0) -%}
-  {{ class.binding_vars[-1] | indent(2*depth, true) }},
+  {{ ('?' ~ class.binding_vars[-1]) | indent(2*depth, true) }}
   {% for name, child in class.fields.items() %}
     {{- select(child, depth+1) -}}
   {% endfor %}

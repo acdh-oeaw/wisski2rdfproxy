@@ -39,9 +39,8 @@ class {{ class.class_name }}(BaseModel):
     {%- if field.cardinality == -1 -%}
     ]
     {%- endif -%}
-    {%- if field.binding %}
-      , SPARQLBinding("{{ field.binding }}"),
-    ] = None
+    {%- if field.binding -%}
+      , SPARQLBinding("{{ field.binding }}")]{# TODO default value #}
     {%- endif -%}
 
 {%- endfor -%}
