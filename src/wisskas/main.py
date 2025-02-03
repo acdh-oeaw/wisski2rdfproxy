@@ -4,15 +4,20 @@ import logging
 from rich import print as rprint
 from rich.rule import Rule
 from rich.syntax import Syntax
+from rich.tree import Tree
 
 from wisskas.filter import endpoint_exclude_fields, endpoint_include_fields
 from wisskas.serialize import (
-    serialize,
     serialize_entrypoint,
     serialize_model,
     serialize_query,
 )
-from wisskas.string_utils import parse_endpointspec, path_to_camelcase, path_to_filename
+from wisskas.string_utils import (
+    FILTER_PATH_SEPARATOR,
+    parse_endpointspec,
+    path_to_camelcase,
+    path_to_filename,
+)
 from wisskas.wisski import parse_paths
 
 parser = argparse.ArgumentParser()
@@ -156,7 +161,46 @@ for path_id, *filters in args.endpoint_exclude_fields:
     )
 
 if len(endpoints) == 0:
-    print(serialize("pathinfo", paths=paths))
+    # print(serialize("pathinfo", paths=paths))
+
+    from pygments.styles import get_style_by_name
+    from pygments.token import (
+        Keyword,
+        Comment,
+        String,
+        Literal,
+        Number,
+        Operator,
+    )
+
+    styles = get_style_by_name(args.color_theme).styles
+
+    def generate_rich_tree(path, prefix=False):
+        if "reference" in path:
+            # entity_reference
+            tp = f"-> [{styles[Keyword]}]{path['reference']['id']}[default][[{styles[Number]}]{path['path_array'][-1]}[default]]"
+        elif path["fieldtype"]:
+            tp = f"[{styles[String]}]{path['fieldtype']}"
+        elif prefix:
+            tp = f"~ [{styles[Comment]}]{path['path_array'][-1]}"
+        else:
+            tp = f"[{styles[Number]}]{path['path_array'][-1]}"
+        tree = Tree(
+            f"[{styles[Operator]}]{FILTER_PATH_SEPARATOR if prefix else ''}[{styles[Literal]}]{path['id']}[default] ({tp}[default])"
+        )
+        for field in path["fields"].values():
+            tree.add(generate_rich_tree(field, True))
+
+        return tree
+
+    for path in sorted(paths.values(), key=lambda p: p["id"]):
+        if "rdf_class" in path:
+            rprint(generate_rich_tree(path), "")
+    rprint(
+        Rule(
+            f"{args.input.name}: {len(paths)} paths, {len([p for p in paths.values() if 'rdf_class' in p])} root types"
+        )
+    )
 
 else:
 
