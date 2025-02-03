@@ -2,6 +2,7 @@ import argparse
 import logging
 
 from rich import print as rprint
+from rich.rule import Rule
 from rich.syntax import Syntax
 
 from wisskas.filter import endpoint_exclude_fields, endpoint_include_fields
@@ -11,7 +12,7 @@ from wisskas.serialize import (
     serialize_model,
     serialize_query,
 )
-from wisskas.string_utils import parse_endpointspec, path_to_camelcase
+from wisskas.string_utils import parse_endpointspec, path_to_camelcase, path_to_filename
 from wisskas.wisski import parse_paths
 
 parser = argparse.ArgumentParser()
@@ -70,36 +71,40 @@ endpoint_parser.add_argument(
     default=[],
 )
 
-parser.add_argument(
+
+file_output = parser.add_argument_group(
+    "File output options",
+)
+file_output.add_argument(
+    "-o",
+    "--output-prefix",
+    help="write generated models and queries to disk, using this output filename prefix",
+)
+
+file_output.add_argument(
     "-a",
     "--server-address",
     metavar="sparql_api_url",
     default="https://graphdb.r11.eu/repositories/RELEVEN",
-    help="also generate FastAPI routes for all endpoints at the output_prefix location, pointing to the given SPARQL endpoint URL",
+    help="also generate FastAPI routes for all endpoints at the --output-prefix location, pointing to the given SPARQL endpoint URL",
 )
-
-parser.add_argument(
+file_output.add_argument(
     "--cors",
     nargs="*",
     default=["*"],
     help="allow CORS requests from these origins (default: %(default)s)",
 )
 
-output = parser.add_argument_group(
-    "Output options",
+cli_output = parser.add_argument_group(
+    "CLI options",
 )
-output.add_argument(
-    "-o",
-    "--output-prefix",
-    help="write generated models and queries to disk, using this output filename prefix",
-)
-output.add_argument(
+cli_output.add_argument(
     "--color-theme",
     default="dracula",
-    help="color scheme to use for console output syntax highlight (see https://pygments.org/docs/styles/#getting-a-list-of-available-styles)",
+    help="color scheme to use for console output syntax highlighting (see https://pygments.org/docs/styles/#getting-a-list-of-available-styles)",
 )
 
-parser.add_argument(
+cli_output.add_argument(
     "-v",
     "--verbose",
     action="count",
@@ -146,22 +151,35 @@ if len(endpoints) == 0:
     print(serialize("pathinfo", paths=paths))
 
 else:
-    for path in endpoints.values():
-        model = serialize_model(path)
-        query = serialize_query(path, args.prefix)
-        entrypoint = serialize_entrypoint(
-            endpoints, args.server_address, {"origins": args.cors}
-        )
 
-        if args.output_prefix and args.server_address:
-            # TODO write to file(s)
-            pass
+    def print_code(code, language="python"):
+        rprint(Syntax(code, language, theme=args.color_theme), "\n")
+
+    def dump_to_file(content, filename):
+        print(f"writing {filename}")
+        with open(filename, "w") as f:
+            f.write(content)
+
+    for path, root in endpoints.items():
+        model = serialize_model(root)
+        query = serialize_query(root, args.prefix)
+
+        if args.output_prefix:
+            filename = f"{args.output_prefix}_{path_to_filename(path)}"
+            dump_to_file(model, f"{filename}.py")
+            dump_to_file(query, f"{filename}.rq")
 
         else:
-
-            def print_code(code, language="python"):
-                rprint(Syntax(code, language, theme=args.color_theme), "\n")
-
+            rprint(Rule(path))
             print_code(model)
             print_code(query, "sparql")
-            print_code(entrypoint)
+
+    entrypoint = serialize_entrypoint(
+        endpoints, args.server_address, {"origins": args.cors}
+    )
+
+    if args.output_prefix and args.server_address:
+        dump_to_file(entrypoint, f"{args.output_prefix}.py")
+    else:
+        rprint(Rule("FastAPI entry point"))
+        print_code(entrypoint)

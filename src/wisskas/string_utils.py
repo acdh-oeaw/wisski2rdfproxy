@@ -19,9 +19,10 @@ def id_to_classname(path_id) -> str:
 
 def parse_endpointspec(pathid_endpointname) -> tuple[str, str]:
     if "/" in pathid_endpointname:
-        return pathid_endpointname.split("/", 1)
+        pathid_endpointname, path = pathid_endpointname.split("/", 1)
     else:
-        return (pathid_endpointname, pathid_endpointname)
+        path = pathid_endpointname
+    return (pathid_endpointname, f"/{path}")
 
 
 def parse_filterspec(filterspec):
@@ -33,6 +34,10 @@ def parse_filterspec(filterspec):
 def path_to_camelcase(path):
     # or .title() on spaced string
     return "".join([s.capitalize() for s in split_path(path)])
+
+
+def path_to_filename(path):
+    return "_".join(split_path(path))
 
 
 def split_path(path):

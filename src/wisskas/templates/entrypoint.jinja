@@ -27,7 +27,7 @@ def version():
 {% for url, endpoint in endpoints.items() %}
 from {{ endpoint.filename }} import {{ endpoint.class_name }}
 
-@app.get("/{{ url }}")
+@app.get("{{ url }}")
 def location(params: Annotated[QueryParameters, Query()]) -> Page[{{ endpoint.class_name }}]:
     adapter = SPARQLModelAdapter(
         target="{{ backend_address }}",
