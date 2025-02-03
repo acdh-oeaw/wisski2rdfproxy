@@ -3,7 +3,7 @@ PREFIX {{ prefix }}: <{{ uri }}>
 {% endfor %}
 
 {% macro select(class, depth=0) -%}
-  {{ class.binding_vars[-1] | indent(4*depth, true) }},
+  {{ class.binding_vars[-1] | indent(2*depth, true) }},
   {% for name, child in class.fields.items() %}
     {{- select(child, depth+1) -}}
   {% endfor %}
@@ -27,15 +27,13 @@ PREFIX {{ prefix }}: <{{ uri }}>
       {% endif %}
     {%- endif -%}
   {%- endfor -%}
-  {%- for name, child in class.fields.items() -%}
-    {{- where(child, depth+1) | indent(2*depth, true) -}}
-
+  {%- for name, child in class.fields.items() %}
+    {{ where(child, depth+1) | indent(2*depth, true) }}
   {%- endfor -%}
-
 {%- endmacro -%}
 
 SELECT
-{{ select(root) }}
+  {{ select(root) }}
 WHERE {
-{{ where(root) }}
+  {{ where(root) }}
 }
