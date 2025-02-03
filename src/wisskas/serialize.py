@@ -12,10 +12,15 @@ def serialize(template_name, **kwargs):
     return template.render(**kwargs)
 
 
-def serialize_entrypoint(endpoints, backend_address, cors={}):
+def serialize_entrypoint(endpoints, backend_address, git_endpoint=False, cors={}):
     return serialize(
         "entrypoint",
-        **{"backend_address": backend_address, "endpoints": endpoints, "cors": cors},
+        **{
+            "backend_address": backend_address,
+            "cors": cors,
+            "endpoints": endpoints,
+            "git": git_endpoint,
+        },
     )
 
 

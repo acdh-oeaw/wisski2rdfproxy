@@ -18,11 +18,14 @@ app.add_middleware(
 )
 {% endif %}
 
+{%- if git %}
 # The automatic health check endpoint is /. The return code has to be 200 or 30x.
 @app.get("/")
 def version():
     repo = Repo(search_parent_directories=True)
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
+
+{% endif -%}
 
 {% for url, endpoint in endpoints.items() %}
 from {{ endpoint.filename }} import {{ endpoint.class_name }}

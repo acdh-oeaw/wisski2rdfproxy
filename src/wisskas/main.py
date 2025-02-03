@@ -88,11 +88,19 @@ file_output.add_argument(
     default="https://graphdb.r11.eu/repositories/RELEVEN",
     help="also generate FastAPI routes for all endpoints at the --output-prefix location, pointing to the given SPARQL endpoint URL",
 )
+
 file_output.add_argument(
     "--cors",
     nargs="*",
     default=["*"],
     help="allow CORS requests from these origins (default: %(default)s)",
+)
+
+file_output.add_argument(
+    "--git-endpoint",
+    action="store_true",
+    default=True,
+    help="whether to generate a git health check endpoint a /",
 )
 
 cli_output = parser.add_argument_group(
@@ -175,7 +183,7 @@ else:
             print_code(query, "sparql")
 
     entrypoint = serialize_entrypoint(
-        endpoints, args.server_address, {"origins": args.cors}
+        endpoints, args.server_address, args.git_endpoint, {"origins": args.cors}
     )
 
     if args.output_prefix and args.server_address:
