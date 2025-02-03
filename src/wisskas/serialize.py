@@ -8,7 +8,7 @@ env.filters["all"] = all
 
 
 def serialize(template_name, **kwargs):
-    template = env.get_template(f"{template_name}.jinja2")
+    template = env.get_template(f"{template_name}.jinja")
     return template.render(**kwargs)
 
 
