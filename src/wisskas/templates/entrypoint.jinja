@@ -1,14 +1,17 @@
 from fastapi import FastAPI, Query
+{%- if cors %}
+from fastapi.middleware.cors import CORSMiddleware
+{%- endif -%}
+{%- if git %}
 from git import Repo
+{%- endif %}
 from os import path
 from rdfproxy import Page, QueryParameters, SPARQLModelAdapter
 from typing import Annotated
 
 app = FastAPI()
 
-{% if cors %}
-from fastapi.middleware.cors import CORSMiddleware
-
+{% if cors -%}
 app.add_middleware(
     CORSMiddleware,
     allow_origins={{ cors.origins | default(["*"], true) }},
@@ -16,7 +19,7 @@ app.add_middleware(
     allow_methods={{ cors.methods | default(["*"], true) }},
     allow_headers={{ cors.headers | default(["*"], true) }},
 )
-{% endif %}
+{% endif -%}
 
 {%- if git %}
 # The automatic health check endpoint is /. The return code has to be 200 or 30x.
@@ -31,7 +34,7 @@ def version():
 from {{ endpoint.filename }} import {{ endpoint.class_name }}
 
 @app.get("{{ url }}")
-def location(params: Annotated[QueryParameters, Query()]) -> Page[{{ endpoint.class_name }}]:
+def {{endpoint.filename}}(params: Annotated[QueryParameters, Query()]) -> Page[{{ endpoint.class_name }}]:
     adapter = SPARQLModelAdapter(
         target="{{ backend_address }}",
         query=open(f"{path.dirname(path.realpath(__file__))}/{{ endpoint.filename }}.rq")

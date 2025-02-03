@@ -27,6 +27,8 @@ def parse_path(path_element):
 
     if properties["is_group"]:
         properties["class_name"] = id_to_classname(str(properties["id"]))
+        # is_group is misleading, paths are groups if their fields isn't empty
+        del properties["is_group"]
 
     if properties["group_id"] == 0:
         # this is a root type

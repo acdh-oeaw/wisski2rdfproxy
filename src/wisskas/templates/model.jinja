@@ -3,11 +3,14 @@ from rdfproxy import ConfigDict, SPARQLBinding
 from typing import Annotated
 
 {%- macro model(class) -%}
+  {# recurse first to generate nested models #}
   {%- for field in class.fields.values() -%}
-    {% if field.is_group -%}
+    {% if field.fields -%}
       {{- model(field) -}}
     {%- endif -%}
   {% endfor %}
+
+{% set is_grouped = class.fields.values() | selectattr('cardinality', '==', -1) | first  %}
 
 class {{ class.class_name }}(BaseModel):
     {%- if description %}
@@ -17,11 +20,12 @@ class {{ class.class_name }}(BaseModel):
     {%- endif %}
     model_config = ConfigDict(
         title="{{ class.name }}",
-        {%- if class.fields.values() | map(attribute='cardinality') | select('equalto', -1) | first %}
-        group_by="{{class.binding}}"
+        {%- if is_grouped %}
+        group_by="id",
         {%- endif %}
     )
-{% for fieldname, field in class.fields.items() %}
+    id: Annotated[AnyUrl, SPARQLBinding("{{ class.binding }}")] = Field(exclude={% if is_grouped %}False{% else %}True{% endif %})
+{%- for fieldname, field in class.fields.items() %}
     {{ fieldname ~ ": "}}
     {%- if field.binding -%}
     Annotated[
