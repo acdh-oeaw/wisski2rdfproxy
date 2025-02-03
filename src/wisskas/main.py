@@ -1,10 +1,10 @@
 import argparse
 import logging
 
-from wisskas.filter import (
-    endpoint_exclude_fields,
-    endpoint_include_fields,
-)
+from rich import print as rprint
+from rich.syntax import Syntax
+
+from wisskas.filter import endpoint_exclude_fields, endpoint_include_fields
 from wisskas.serialize import (
     serialize,
     serialize_entrypoint,
@@ -21,7 +21,6 @@ parser.add_argument(
     default="releven_assertions_20240821.xml",
     help="a WissKI pathbuilder file",
 )
-parser.add_argument("--output", type=str, help="output filename")
 
 endpoint_parser = parser.add_argument_group(
     "Endpoint/model options",
@@ -86,6 +85,20 @@ parser.add_argument(
     help="allow CORS requests from these origins (default: %(default)s)",
 )
 
+output = parser.add_argument_group(
+    "Output options",
+)
+output.add_argument(
+    "-o",
+    "--output-prefix",
+    help="write generated models and queries to disk, using this output filename prefix",
+)
+output.add_argument(
+    "--color-theme",
+    default="dracula",
+    help="color scheme to use for console output syntax highlight (see https://pygments.org/docs/styles/#getting-a-list-of-available-styles)",
+)
+
 parser.add_argument(
     "-v",
     "--verbose",
@@ -140,11 +153,15 @@ else:
             endpoints, args.server_address, {"origins": args.cors}
         )
 
-        if args.output and args.server_address:
+        if args.output_prefix and args.server_address:
             # TODO write to file(s)
             pass
 
         else:
-            print(model)
-            print(query)
-            print(entrypoint)
+
+            def print_code(code, language="python"):
+                rprint(Syntax(code, language, theme=args.color_theme), "\n")
+
+            print_code(model)
+            print_code(query, "sparql")
+            print_code(entrypoint)
