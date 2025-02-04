@@ -23,3 +23,8 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 rdfproxy = { git = "https://github.com/acdh-oeaw/rdfproxy.git" }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.4",
+]
