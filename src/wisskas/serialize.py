@@ -14,7 +14,7 @@ def serialize(template_name, **kwargs):
 
 def serialize_entrypoint(endpoints, backend_address, git_endpoint=False, cors={}):
     return serialize(
-        "entrypoint",
+        "entrypoint.py",
         **{
             "backend_address": backend_address,
             "cors": cors,
@@ -25,8 +25,8 @@ def serialize_entrypoint(endpoints, backend_address, git_endpoint=False, cors={}
 
 
 def serialize_model(root):
-    return serialize("model", **{"root": root})
+    return serialize("model.py", **{"root": root})
 
 
 def serialize_query(root, prefixes={}):
-    return serialize("query", **{"root": root, "prefixes": prefixes})
+    return serialize("query.rq", **{"root": root, "prefixes": prefixes})
