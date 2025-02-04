@@ -27,4 +27,5 @@ rdfproxy = { git = "https://github.com/acdh-oeaw/rdfproxy.git" }
 [dependency-groups]
 dev = [
     "ruff>=0.9.4",
+    "mkdocs-material>=9.6.2",
 ]
