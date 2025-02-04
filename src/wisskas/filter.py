@@ -32,9 +32,11 @@ def create_clone(parent, fieldname, filterspec, prefix, used_names):
 
     if clone["fieldtype"] == "entity_reference":
         logging.debug(f"cloning reference to '{clone['reference']['id']}'")
-        # TODO handle entity_reference
-        # clone["fields"] = clone["reference"]["fields"]
-        pass
+        clone["fields"] = clone["reference"]["fields"]
+        clone["class_name"] = (
+            f"{parent['class_name']}_{clone['reference']['class_name']}"
+        )
+        clone["name"] = clone["reference"]["name"]
     else:
         for a, b in zip(parent["path_array"], clone["path_array"]):
             if a == b:
@@ -124,5 +126,10 @@ def clone_include(parent, fieldname, include, prefix=[], used_names=set()):
             if "*" in include or name in includes
         }
     if len(clone["fields"]) == 0:
+        logging.debug(f"cloned {clone['id']} with 0 fields")
         clone["type"] = WISSKI_TYPES["uri"]
+    else:
+        logging.debug(
+            f"cloned {clone['id']} with fields: {list(clone['fields'].keys())}"
+        )
     return clone
