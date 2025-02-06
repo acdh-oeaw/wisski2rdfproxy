@@ -24,49 +24,69 @@ def handle_recursion(prefix):
     raise RuntimeError("recursion somewhere")
 
 
-def create_clone(parent, fieldname, filterspec, prefix, used_names):
+def debug(task, path, msg, depth):
+    logging.debug(f"{' ' * 2 * depth}{task} {path['id']}: {msg}")
+
+
+def debug_clone(path, msg, depth=0):
+    debug("cloning", path, msg, depth)
+
+
+def debug_filter(path, msg, depth=0):
+    debug("filtering", path, msg, depth)
+
+
+def create_clone(parent, fieldname, filterspec, prefix, used_names, depth=0):
     # shallow copy
     clone = copy.copy(parent["fields"][fieldname])
 
-    varnames = [] if "binding_vars" in parent else [fieldname]
+    varnames = (
+        copy.copy(parent["binding_vars"]) if "binding_vars" in parent else [fieldname]
+    )
 
     if clone["fieldtype"] == "entity_reference":
-        logging.debug(f"cloning reference to '{clone['reference']['id']}'")
+        debug_clone(clone, f"entity reference to '{clone['reference']['id']}'", depth)
         clone["fields"] = clone["reference"]["fields"]
         clone["class_name"] = (
             f"{parent['class_name']}_{clone['reference']['class_name']}"
         )
         clone["name"] = clone["reference"]["name"]
-    else:
-        for a, b in zip(parent["path_array"], clone["path_array"]):
-            if a == b:
-                logging.debug(
-                    f"ignoring prefix {a} in '{clone['id']}' because it exists in parent '{parent['id']}'"
+    # set parent paths to None
+    if len(clone["path_array"]) > len(parent["path_array"]):
+        for i in range(len(parent["path_array"])):
+            if (
+                parent["path_array"][i] is None
+                or clone["path_array"][i] == parent["path_array"][i]
+            ):
+                debug_clone(
+                    clone,
+                    f"ignoring prefix because it exists in parent '{parent['id']}'",
+                    depth,
                 )
-                varnames.append(None)
+                clone["path_array"][i] = None
             else:
                 break
-        if clone["datatype_property"]:
-            clone["path_array"].append(clone["datatype_property"])
+    else:
+        # child of an entity_reference
+        varnames = [parent["binding_vars"][-1]]
+        clone["path_array"][0] = None
 
+    if clone["datatype_property"]:
+        clone["path_array"].append(clone["datatype_property"])
     if "binding_vars" in parent:
-        varnames.append(parent["binding_vars"][-1])
-
         for name in create_names(
             varnames[-1] if varnames else "",
             clone["id"],
             used_names,
-            1 + (len(clone["path_array"]) - len(varnames)) // 2,
+            1 + len(clone["path_array"]) // 2 - len(varnames),
         ):
-            varnames.append(name)
             varnames.append(name)
 
     clone["binding_vars"] = varnames
     clone["binding"] = varnames[-1]
+    debug_clone(clone, f"path {clone['path_array']}", depth)
+    debug_clone(clone, f"binding vars {clone['binding_vars']}", depth)
 
-    logging.debug(
-        f"cloning {fieldname} (path id {clone['id']}, prefix {prefix}) with binding vars: {clone['binding_vars']}"
-    )
     filters = parse_filterspec(filterspec)
     for key in filters:
         if key == "*" or key == "**":
@@ -75,24 +95,26 @@ def create_clone(parent, fieldname, filterspec, prefix, used_names):
                     f"found '{key}' at {'.'.join(prefix[1:])} even though there are no fields"
                 )
             else:
-                logging.debug(f"clone: found '{key}' in type '{clone['id']}'")
+                debug_clone(clone, f"found field '{key}'", depth)
             continue
         exists = False
         for f in clone["fields"].values():
             if f["id"] == key:
-                logging.debug(f"clone: found '{key}' in field of '{clone['id']}'")
+                debug_clone(clone, f"found field '{key}'", depth)
                 exists = True
                 break
         if not exists:
             logging.warning(
-                f"unknown field specified in include/exclude list at {FILTER_PATH_SEPARATOR.join(prefix[1:]) or clone['id']}: {key}"
+                f"cloning {clone['id']} unknown field specified in include/exclude list at {FILTER_PATH_SEPARATOR.join(prefix[1:])}: {key}"
             )
     return (clone, filters)
 
 
-def clone_exclude(parent, fieldname, exclude, prefix=[], used_names=set()):
-    clone, excludes = create_clone(parent, fieldname, exclude, prefix, used_names)
-    logging.debug(f"{clone['id']}: exclude {excludes}")
+def clone_exclude(parent, fieldname, exclude, prefix=[], used_names=set(), depth=0):
+    clone, excludes = create_clone(
+        parent, fieldname, exclude, prefix, used_names, depth
+    )
+    debug_filter(clone, f"exclude {excludes}")
     if "*" in exclude:
         clone["type"] = WISSKI_TYPES["uri"]
         clone["fields"] = {}
@@ -101,7 +123,7 @@ def clone_exclude(parent, fieldname, exclude, prefix=[], used_names=set()):
     try:
         clone["fields"] = {
             name: clone_exclude(
-                clone, name, excludes.get(f["id"], []), prefix, used_names
+                clone, name, excludes.get(f["id"], []), prefix, used_names, depth + 1
             )
             for name, f in clone["fields"].items()
             if excludes.get(f["id"], None) != []
@@ -111,9 +133,11 @@ def clone_exclude(parent, fieldname, exclude, prefix=[], used_names=set()):
     return clone
 
 
-def clone_include(parent, fieldname, include, prefix=[], used_names=set()):
-    clone, includes = create_clone(parent, fieldname, include, prefix, used_names)
-    logging.debug(f"{clone['id']}: include {includes}")
+def clone_include(parent, fieldname, include, prefix=[], used_names=set(), depth=0):
+    clone, includes = create_clone(
+        parent, fieldname, include, prefix, used_names, depth
+    )
+    debug_filter(clone, f"include {includes}", depth)
     if "**" in include:
         clone["fields"] = {
             name: clone_include(clone, name, ["**"], prefix, used_names)
@@ -121,15 +145,15 @@ def clone_include(parent, fieldname, include, prefix=[], used_names=set()):
         }
     else:
         clone["fields"] = {
-            name: clone_include(clone, name, includes.get(name, []), prefix, used_names)
+            name: clone_include(
+                clone, name, includes.get(name, []), prefix, used_names, depth + 1
+            )
             for name in clone["fields"].keys()
             if "*" in include or name in includes
         }
     if len(clone["fields"]) == 0:
-        logging.debug(f"cloned {clone['id']} with 0 fields")
+        debug_filter(clone, "class is down to 0 fields", depth)
         clone["type"] = WISSKI_TYPES["uri"]
     else:
-        logging.debug(
-            f"cloned {clone['id']} with fields: {list(clone['fields'].keys())}"
-        )
+        debug_filter(clone, f"remaining fields {list(clone['fields'].keys())}", depth)
     return clone
