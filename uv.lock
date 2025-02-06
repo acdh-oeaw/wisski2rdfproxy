@@ -831,6 +831,18 @@ wheels = [
 ]
 
 [[package]]
+name = "rich-argparse"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "rich" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7f/ee/c410251ff6123d4417f2fe8e72c8628f187682b70ce34134a2a3e307a2d5/rich_argparse-1.6.0.tar.gz", hash = "sha256:092083c30da186f25bcdff8b1d47fdfb571288510fb051e0488a72cc3128de13", size = 17499 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/45/54b95bb72bb17c27a7252bee5034955020b5869a33918b660ffc29cbf608/rich_argparse-1.6.0-py3-none-any.whl", hash = "sha256:fbe70a1d821b3f2fa8958cddf0cae131870a6e9faa04ab52b409cb1eda809bd7", size = 20072 },
+]
+
+[[package]]
 name = "ruff"
 version = "0.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -948,6 +960,7 @@ dependencies = [
     { name = "lxml" },
     { name = "rdfproxy" },
     { name = "rich" },
+    { name = "rich-argparse" },
 ]
 
 [package.dev-dependencies]
@@ -963,6 +976,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=5.3.0" },
     { name = "rdfproxy", git = "https://github.com/acdh-oeaw/rdfproxy.git" },
     { name = "rich", specifier = ">=13.9.4" },
+    { name = "rich-argparse", specifier = ">=1.6.0" },
 ]
 
 [package.metadata.requires-dev]

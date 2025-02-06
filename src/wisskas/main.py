@@ -5,33 +5,83 @@ from rich import print as rprint
 from rich.rule import Rule
 from rich.syntax import Syntax
 from rich.tree import Tree
+from rich_argparse import RichHelpFormatter
 
 from wisskas.filter import endpoint_exclude_fields, endpoint_include_fields
-from wisskas.serialize import (
-    serialize_entrypoint,
-    serialize_model,
-    serialize_query,
-)
+from wisskas.serialize import serialize_entrypoint, serialize_model, serialize_query
 from wisskas.string_utils import (
-    FILTER_PATH_SEPARATOR,
     parse_endpointspec,
     path_to_camelcase,
     path_to_filename,
 )
-from wisskas.wisski import parse_paths
+import wisskas.wisski
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=RichHelpFormatter)
 parser.add_argument(
-    "--input",
+    "-input",
     type=argparse.FileType("r"),
-    default="releven_assertions_20240821.xml",
+    default="tests/data/releven_assertions_20240821.xml",
     help="a WissKI pathbuilder file",
 )
 
-endpoint_parser = parser.add_argument_group(
-    "Endpoint/model options",
-    "specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).\nIf no endpoints are given, lists all available types without generating any endpoints.",
+subparsers = parser.add_subparsers(
+    title="CLI commands",
+    dest="command",
+    required=True,
 )
+
+path_parser = subparsers.add_parser(
+    "paths",
+    help="show information about WissKI paths",
+    formatter_class=RichHelpFormatter,
+)
+endpoint_parser = subparsers.add_parser(
+    "endpoints",
+    help="generate models, queries and FastAPI endpoints",
+    #     "specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).\nIf no endpoints are given, lists all available types without generating any endpoints.",
+    formatter_class=RichHelpFormatter,
+)
+# include_parser = subparsers.add_parser(
+#     "filter_include",
+#     help="derive a limited nested model based on including fields",
+#     formatter_class=RichHelpFormatter,
+# )
+# exclude_parser = subparsers.add_parser(
+#     "filter_exclude",
+#     help="derive a limited nested model based on excluding fields",
+#     formatter_class=RichHelpFormatter,
+# )
+
+path_parser.add_argument(
+    "path_id", nargs="*", help="show path details for the given path id(s)."
+)
+path_parser.add_argument(
+    "-a", "--all", action="store_true", help="show details of all available paths"
+)
+
+modes = path_parser.add_mutually_exclusive_group(required=True)
+modes.add_argument(
+    "-f", "--flat", action="store_true", help="show flat (XML) path representation"
+)
+modes.add_argument(
+    "-n", "--nested", action="store_true", help="show nested path representation"
+)
+
+# include_parser.add_argument("path_id", help="main")
+# include_parser.add_argument(
+#     "fieldspec",
+#     nargs="+",
+#     help="1 or more field paths that should be included in the derived model",
+#     default=[],
+# )
+
+# exclude_parser.add_argument("path_id", help="main")
+# exclude_parser.add_argument(
+#     "fieldspec",
+#     nargs="*",
+#     help="0 or more field paths that should be excluded in the derived model",
+#     default=[],
+# )
 
 endpoint_parser.add_argument(
     "-p",
@@ -77,7 +127,7 @@ endpoint_parser.add_argument(
 )
 
 
-file_output = parser.add_argument_group(
+file_output = endpoint_parser.add_argument_group(
     "File output options",
 )
 file_output.add_argument(
@@ -126,83 +176,115 @@ cli_output.add_argument(
 )
 
 args = parser.parse_args()
-args.prefix = dict(args.prefix)
 
 logging.basicConfig(
     level=max(10, 30 - 10 * args.verbose), format="%(levelname)s: %(message)s"
 )
 
-root_types, paths = parse_paths(args.input)
 
-endpoints = {}
+def file_rule(msg):
+    return Rule(f"{args.input.name}: {msg}")
 
-for path_id, *filters in args.endpoint_include_fields:
-    if len(filters) == 0:
-        raise Exception(
-            f"endpoint '{path_id}' is defined using --endpoint-include-fields but is missing any fields to include"
-        )
-    path_id, endpoint_path = parse_endpointspec(path_id)
 
-    if endpoint_path in endpoints:
-        raise RuntimeError(f"Endpoint path {endpoint_path} is specified more than once")
-    endpoints[endpoint_path] = endpoint_include_fields(
-        paths[path_id], filters, path_to_camelcase(endpoint_path)
-    )
+if args.command == "paths":
+    if args.flat:
+        paths = wisskas.wisski.parse_flat_paths(args.input)
 
-for path_id, *filters in args.endpoint_exclude_fields:
-    path_id, endpoint_path = parse_endpointspec(path_id)
+        if args.all:
+            args.path_id = sorted(paths.keys())
 
-    if endpoint_path in endpoints:
-        raise RuntimeError(f"Endpoint path {endpoint_path} is specified more than once")
-    endpoints[endpoint_path] = endpoint_exclude_fields(
-        paths[path_id],
-        filters,
-        path_to_camelcase(endpoint_path),
-    )
-
-if len(endpoints) == 0:
-    # print(serialize("pathinfo", paths=paths))
-
-    from pygments.styles import get_style_by_name
-    from pygments.token import (
-        Keyword,
-        Comment,
-        String,
-        Literal,
-        Number,
-        Operator,
-    )
-
-    styles = get_style_by_name(args.color_theme).styles
-
-    def generate_rich_tree(path, prefix=False):
-        if "reference" in path:
-            # entity_reference
-            tp = f"-> [{styles[Keyword]}]{path['reference']['id']}[default][[{styles[Number]}]{path['path_array'][-1]}[default]]"
-        elif path["fieldtype"]:
-            tp = f"[{styles[String]}]{path['fieldtype']}"
-        elif prefix:
-            tp = f"~ [{styles[Comment]}]{path['path_array'][-1]}"
+        if args.path_id:
+            for path_id in args.path_id:
+                rprint(paths[path_id])
         else:
-            tp = f"[{styles[Number]}]{path['path_array'][-1]}"
-        tree = Tree(
-            f"[{styles[Operator]}]{FILTER_PATH_SEPARATOR if prefix else ''}[{styles[Literal]}]{path['id']}[default] ({tp}[default])"
-        )
-        for field in path["fields"].values():
-            tree.add(generate_rich_tree(field, True))
+            for path in paths.keys():
+                rprint(f"- {path}")
 
-        return tree
+        rprint(file_rule(f"{len(paths)} paths"))
 
-    for path in sorted(paths.values(), key=lambda p: p["id"]):
-        if "rdf_class" in path:
-            rprint(generate_rich_tree(path), "")
-    rprint(
-        Rule(
-            f"{args.input.name}: {len(paths)} paths, {len([p for p in paths.values() if 'rdf_class' in p])} root types"
+    elif args.nested:
+        root_types, paths = wisskas.wisski.parse_paths(args.input)
+
+        if args.all:
+            args.path_id = sorted(path["id"] for path in root_types.values())
+
+        if args.path_id:
+            from pygments.styles import get_style_by_name
+            from pygments.token import (
+                Keyword,
+                Comment,
+                String,
+                Literal,
+                Number,
+                Operator,
+            )
+
+            styles = get_style_by_name(args.color_theme).styles
+
+            def generate_rich_tree(path, prefix=False):
+                if "reference" in path:
+                    # entity_reference
+                    tp = f"[{styles[Keyword]}]{path['reference']['id']}[default]/[{styles[Number]}]{path['path_array'][-1]}"
+                elif path["fieldtype"]:
+                    tp = f"[{styles[String]}]{path['fieldtype']}"
+                elif prefix:
+                    tp = f"[{styles[Comment]}]{path['path_array'][-1]}"
+                else:
+                    tp = f"[{styles[Number]}]{path['path_array'][-1]}"
+                if prefix and path["cardinality"] == -1:
+                    tp = f"list[ {tp} [default]]"
+                tree = Tree(
+                    f"[{styles[Operator]}][{styles[Literal]}]{path['id']}[default]: {tp}[default]"
+                )
+                for field in path["fields"].values():
+                    tree.add(generate_rich_tree(field, True))
+
+                return tree
+
+            for path_id in args.path_id:
+                if "rdf_class" in paths[path_id]:
+                    rprint(generate_rich_tree(paths[path_id]), "")
+        else:
+            for rdf_class, path in root_types.items():
+                rprint(f"- {path['id']}: {rdf_class}")
+        rprint(
+            Rule(
+                f"{args.input.name}: {len(paths)} paths, {len([p for p in paths.values() if 'rdf_class' in p])} root types"
+            )
         )
-    )
 
 else:
+    root_types, paths = wisskas.wisski.parse_paths(args.input)
+    args.prefix = dict(args.prefix)
+    endpoints = {}
+
+    for path_id, *filters in args.endpoint_include_fields:
+        if len(filters) == 0:
+            raise Exception(
+                f"endpoint '{path_id}' is defined using --endpoint-include-fields but is missing any fields to include"
+            )
+        path_id, endpoint_path = parse_endpointspec(path_id)
+
+        if endpoint_path in endpoints:
+            raise RuntimeError(
+                f"Endpoint path {endpoint_path} is specified more than once"
+            )
+        endpoints[endpoint_path] = endpoint_include_fields(
+            paths[path_id], filters, path_to_camelcase(endpoint_path)
+        )
+
+    for path_id, *filters in args.endpoint_exclude_fields:
+        path_id, endpoint_path = parse_endpointspec(path_id)
+
+        if endpoint_path in endpoints:
+            raise RuntimeError(
+                f"Endpoint path {endpoint_path} is specified more than once"
+            )
+        endpoints[endpoint_path] = endpoint_exclude_fields(
+            paths[path_id],
+            filters,
+            path_to_camelcase(endpoint_path),
+        )
 
     def print_code(code, language="python"):
         rprint(Syntax(code, language, theme=args.color_theme), "\n")

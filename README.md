@@ -16,3 +16,15 @@ WissKI pathbuilder defines (nested) models that are linked to RDF classes. By al
 - tools for generating SHACL shapes from the same models (`wisskas.shacl`)
 - a command line tool for doing all of the above (`wisskas.main`)
 
+## How to inspect some paths
+
+```bash
+uv run wisskas paths --flat
+uv run wisskas paths --flat publication
+uv run wisskas paths --flat external_authority
+uv run wisskas paths --flat --all
+
+uv run wisskas paths --nested
+uv run wisskas paths --nested publication
+uv run wisskas paths --nested --all
+```
