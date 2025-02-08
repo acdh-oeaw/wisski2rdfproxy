@@ -39,6 +39,7 @@ def debug_filter(path, msg, depth=0):
 def create_clone(parent, fieldname, filterspec, prefix, used_names, depth=0):
     # shallow copy
     clone = copy.copy(parent["fields"][fieldname])
+    clone["path_array"] = copy.copy(clone["path_array"])
 
     varnames = (
         copy.copy(parent["binding_vars"]) if "binding_vars" in parent else [fieldname]
@@ -72,7 +73,9 @@ def create_clone(parent, fieldname, filterspec, prefix, used_names, depth=0):
         clone["path_array"][0] = None
 
     if clone["datatype_property"]:
+        debug_clone(clone, f"adding datatype_property to {clone['path_array']}")
         clone["path_array"].append(clone["datatype_property"])
+
     if "binding_vars" in parent:
         for name in create_names(
             varnames[-1] if varnames else "",
@@ -151,7 +154,7 @@ def clone_include(parent, fieldname, include, prefix=[], used_names=set(), depth
             for name in clone["fields"].keys()
             if "*" in include or name in includes
         }
-    if len(clone["fields"]) == 0:
+    if len(clone["fields"]) == 0 and not clone["datatype_property"]:
         debug_filter(clone, "class is down to 0 fields", depth)
         clone["type"] = WISSKI_TYPES["uri"]
     else:
