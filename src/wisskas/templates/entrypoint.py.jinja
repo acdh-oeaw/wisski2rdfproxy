@@ -9,6 +9,10 @@ from os import path
 from rdfproxy import Page, QueryParameters, SPARQLModelAdapter
 from typing import Annotated
 
+{% for endpoint in endpoints.values() -%}
+from {{ endpoint.filename }} import {{ endpoint.class_name }}
+{% endfor %}
+
 app = FastAPI()
 
 {% if cors -%}
@@ -28,19 +32,48 @@ def version():
     repo = Repo(search_parent_directories=True)
     return {"version": repo.git.describe(tags=True, dirty=True, always=True)}
 
-{% endif -%}
+{% endif %}
+
+def load_query(name):
+    return open(f"{path.dirname(path.realpath(__file__))}/{name}.rq").read().replace("\n ", " ")
 
 {% for url, endpoint in endpoints.items() %}
-from {{ endpoint.filename }} import {{ endpoint.class_name }}
-
 @app.get("{{ url }}")
+{%- if endpoint.details %}
+def {{endpoint.filename}}(unique_identifier: str) -> {{ endpoint.class_name }}:
+{% else %}
 def {{endpoint.filename}}(params: Annotated[QueryParameters, Query()]) -> Page[{{ endpoint.class_name }}]:
+{% endif %}
+    query = load_query("{{ endpoint.filename }}")
+
+{%- if endpoint.details %}
+
+    # "DETAIL" ENDPOINT DESIGN QUESTION: how to inject the id parameter into the query and handle the result
+
+    # CURRENT workaround option: modify query manually (requires referring to the binding name),
+    # just run manually modified query for 1 result
+    #query += f' FILTER (?{endpoint.binding}="{unique_identifier}"^^xsd:string)'
+{%- endif %}
     adapter = SPARQLModelAdapter(
         target="{{ backend_address }}",
-        query=open(f"{path.dirname(path.realpath(__file__))}/{{ endpoint.filename }}.rq")
-        .read()
-        .replace("\n ", " "),
+        query=query,
         model={{ endpoint.class_name }},
     )
+
+{% if endpoint.details %}
+    result = adapter.query(QueryParameters(size=1))
+
+    # OPTION 1: use rdfproxy's 'filter' (which can refer to the model field, rather than
+    # the binding variable)
+    #result = adapter.query(QueryParameters(filter={"model_id_field": unique_identifier}))
+
+    # with the CURRENT and OPTION 1, still need to manually assert that result.total == 1, then:
+    return result.items[0]
+
+    # OPTION 2: rdfproxy could provide a dedicated method for single results:
+    #return adapter.queryOne(model_id_field=unique_identifier)
+{% else %}
     return adapter.query(params)
-{% endfor %}
+{% endif %}
+
+{%- endfor %}

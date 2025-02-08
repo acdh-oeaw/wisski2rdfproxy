@@ -299,6 +299,7 @@ else:
 
         # this is the local filename
         root["filename"] = filename.rsplit("/", 1)[-1]
+        root["details"] = path.endswith("details")
 
         model = serialize_model(root)
         query = serialize_query(root, args.prefix)

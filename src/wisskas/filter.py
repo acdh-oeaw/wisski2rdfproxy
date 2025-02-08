@@ -41,6 +41,14 @@ def create_clone(parent, fieldname, filterspec, prefix, used_names, depth=0):
     clone = copy.copy(parent["fields"][fieldname])
     clone["path_array"] = copy.copy(clone["path_array"])
 
+    if parent["path_array"] == []:
+        debug_clone(
+            clone,
+            f"root type, changing classname from {clone['class_name']} to {fieldname}",
+        )
+        clone["class_name"] = fieldname
+        clone["root"] = True
+
     varnames = (
         copy.copy(parent["binding_vars"]) if "binding_vars" in parent else [fieldname]
     )
