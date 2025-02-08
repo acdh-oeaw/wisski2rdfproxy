@@ -24,10 +24,14 @@ class {{ class.class_name }}(BaseModel):
         group_by="id",
         {%- endif %}
     )
-    id: Annotated[AnyUrl, SPARQLBinding("{{ class.binding }}")] = Field(exclude={% if is_grouped %}False{% else %}True{% endif %})
-{%- for fieldname, field in class.fields.items() %}
+    {%- if class.root %}
+    id: Annotated[AnyUrl, SPARQLBinding("{{ class.binding }}")]
+    {%- else %}
+    id: Annotated[AnyUrl | None, SPARQLBinding("{{ class.binding }}")] = None{#Field(default=None, exclude={% if is_grouped %}False{% else %}False{% endif %})#}
+    {%- endif %}
+{% for fieldname, field in class.fields.items() %}
     {{ fieldname ~ ": "}}
-    {%- if field.binding -%}
+    {%- if field.binding and not field.class_name -%}
     Annotated[
     {%- endif -%}
     {%- if field.cardinality == -1 -%}
@@ -40,12 +44,14 @@ class {{ class.class_name }}(BaseModel):
     {%- else -%}
     ????
     {% endif %}
+    {%- if not is_grouped %} | None{% endif %}
     {%- if field.cardinality == -1 -%}
     ]
     {%- endif -%}
-    {%- if field.binding -%}
+    {%- if field.binding and not field.class_name -%}
       , SPARQLBinding("{{ field.binding }}")]{# TODO default value #}
     {%- endif -%}
+    {%- if not is_grouped %} = None{%- endif -%}
 
 {%- endfor -%}
 {%- endmacro -%}
