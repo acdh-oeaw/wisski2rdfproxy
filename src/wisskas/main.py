@@ -107,13 +107,7 @@ endpoint_parser.add_argument(
     metavar=("path_id[/endpoint/target/path]", "exclude_field"),
     action="append",
     help="a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.",
-    default=[
-        [
-            "publication/pub/list",
-            "publication_text_assertion",
-            "publication_creation.publication_creation_event.*",
-        ]
-    ],
+    default=[["external_authority"]],
 )
 
 endpoint_parser.add_argument(
@@ -123,7 +117,25 @@ endpoint_parser.add_argument(
     metavar=("path_id[/endpoint/target/path]", "include_field"),
     action="append",
     help="a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.",
-    default=[],
+    default=[
+        [
+            "publication/publication/list",
+            "publication_creation.publication_creation_event.*",
+            "publication_text_assertion",
+        ],
+        ["person/person/list", "person_descriptive_name"],
+        [
+            "person/person/details",
+            "person_descriptive_name",
+            "person_id_assignment.**",
+            # "person_appellation_assertion.*", # this kills it -- because some of the other fields are just none
+            "person_appellation_assertion.person_appellation_is.*",
+            # "person_appellation_assertion.person_appellation_by", # can trigger read timeout
+            # "person_appellation_assertion.person_appellation_by.*", # can trigger read timeout
+            "person_kinship_assertion.*",
+        ],
+        ["written_work", "written_work_label", "work_creation_assertion"],
+    ],
 )
 
 
