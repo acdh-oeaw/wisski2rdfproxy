@@ -23,10 +23,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-rdfproxy = { git = "https://github.com/acdh-oeaw/rdfproxy.git" }
+rdfproxy = { git = "https://github.com/acdh-oeaw/rdfproxy", branch = "prototype/ordering" }
 
 [dependency-groups]
 dev = [
     "ruff>=0.9.4",
     "mkdocs-material>=9.6.2",
+]
+examples = [
+    "fastapi[standard]>=0.115.8",
+    "gitpython>=3.1.44",
 ]
