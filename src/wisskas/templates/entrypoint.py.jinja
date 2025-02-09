@@ -42,7 +42,7 @@ def load_query(name):
 {%- if endpoint.details %}
 def {{endpoint.filename}}(unique_identifier: str) -> {{ endpoint.class_name }}:
 {% else %}
-def {{endpoint.filename}}(params: Annotated[QueryParameters, Query()]) -> Page[{{ endpoint.class_name }}]:
+def {{endpoint.filename}}(params: Annotated[QueryParameters[{{ endpoint.class_name }}], Query()]) -> Page[{{ endpoint.class_name }}]:
 {% endif %}
     query = load_query("{{ endpoint.filename }}")
 
