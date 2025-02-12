@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-wisskas = "wisskas:main"
+wisskas = "wisskas.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
