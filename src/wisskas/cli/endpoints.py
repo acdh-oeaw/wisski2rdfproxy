@@ -18,14 +18,7 @@ def register_subcommand(parser: ArgumentParser) -> Callable:
         metavar=("prefix", "full_url"),
         action="append",
         help="namespace replacements to carry out, use a --prefix for every prefix specification (default: %(default)s)",
-        default=[
-            ["crm", "http://www.cidoc-crm.org/cidoc-crm/"],
-            ["lrmoo", "http://iflastandards.info/ns/lrm/lrmoo/"],
-            ["star", "https://r11.eu/ns/star/"],
-            ["skos", "http://www.w3.org/2004/02/skos/core#"],
-            ["r11", "https://r11.eu/ns/spec/"],
-            ["r11pros", "https://r11.eu/ns/prosopography/"],
-        ],
+        default=[],
     )
 
     parser.add_argument(
@@ -35,7 +28,7 @@ def register_subcommand(parser: ArgumentParser) -> Callable:
         metavar=("path_id[/endpoint/target/path]", "exclude_field"),
         action="append",
         help="a path id for which to generate an endpoint, followed by 0 or more field paths that should be excluded from the endpoint return value. any fields not in this list will be included by default.",
-        default=[["external_authority"]],
+        default=[],
     )
 
     parser.add_argument(
@@ -45,25 +38,7 @@ def register_subcommand(parser: ArgumentParser) -> Callable:
         metavar=("path_id[/endpoint/target/path]", "include_field"),
         action="append",
         help="a path id for which to generate an endpoint, followed by 1 or more field paths that should be included in the endpoint return value.",
-        default=[
-            [
-                "publication/publication/list",
-                "publication_creation.publication_creation_event.*",
-                "publication_text_assertion",
-            ],
-            ["person/person/list", "person_descriptive_name"],
-            [
-                "person/person/details",
-                "person_descriptive_name",
-                "person_id_assignment.**",
-                # "person_appellation_assertion.*", # this kills it -- because some of the other fields are just none
-                "person_appellation_assertion.person_appellation_is.*",
-                # "person_appellation_assertion.person_appellation_by", # can trigger read timeout
-                # "person_appellation_assertion.person_appellation_by.*", # can trigger read timeout
-                "person_kinship_assertion.*",
-            ],
-            ["written_work", "written_work_label", "work_creation_assertion"],
-        ],
+        default=[],
     )
 
     file_output = parser.add_argument_group(
@@ -79,7 +54,6 @@ def register_subcommand(parser: ArgumentParser) -> Callable:
         "-a",
         "--server-address",
         metavar="sparql_api_url",
-        default="https://graphdb.r11.eu/repositories/RELEVEN",
         help="also generate FastAPI routes for all endpoints at the --output-prefix location, pointing to the given SPARQL endpoint URL",
     )
 
@@ -93,25 +67,9 @@ def register_subcommand(parser: ArgumentParser) -> Callable:
     file_output.add_argument(
         "--git-endpoint",
         action="store_true",
-        default=True,
         help="whether to generate a git health check endpoint a /",
     )
 
-    # include_parser.add_argument("path_id", help="main")
-    # include_parser.add_argument(
-    #     "fieldspec",
-    #     nargs="+",
-    #     help="1 or more field paths that should be included in the derived model",
-    #     default=[],
-    # )
-
-    # exclude_parser.add_argument("path_id", help="main")
-    # exclude_parser.add_argument(
-    #     "fieldspec",
-    #     nargs="*",
-    #     help="0 or more field paths that should be excluded in the derived model",
-    #     default=[],
-    # )
     return main
 
 

@@ -35,26 +35,12 @@ def main():
 
         return subparser
 
-    add_command("endpoints", endpoints_args)
-    add_command("paths", paths_args)
-    # endpoints.add_arguments(
-    # subparsers.add_parser(
-    #     "endpoints",
-    #     help="generate models, queries and FastAPI endpoints",
-    #     #     "specify one or more WissKI path ids for which to generate endpoints (i.e. models + a query).\nIf no endpoints are given, lists all available types without generating any endpoints.",
-    #     formatter_class=RichHelpFormatter,
-    # )
-    # )
-    # # include_parser = subparsers.add_parser(
-    # #     "filter_include",
-    # #     help="derive a limited nested model based on including fields",
-    # #     formatter_class=RichHelpFormatter,
-    # # )
-    # # exclude_parser = subparsers.add_parser(
-    # #     "filter_exclude",
-    # #     help="derive a limited nested model based on excluding fields",
-    #     formatter_class=RichHelpFormatter,
-    # )
+    add_command(
+        "endpoints",
+        endpoints_args,
+        help="generate models, queries and FastAPI endpoints",
+    )
+    add_command("paths", paths_args, help="inspect pathbuilder definitions")
 
     cli_output = parser.add_argument_group(
         "CLI options",
