@@ -1,7 +1,7 @@
 import logging
 import pathlib
 
-from lxml import objectify
+from lxml import etree, objectify
 
 from wisskas.string_utils import id_to_classname
 
@@ -13,70 +13,91 @@ WISSKI_TYPES = {
 }
 
 
-def parse_path(path_element):
-    properties = {child.tag: child for child in path_element.iterchildren()}
-    properties["path_array"] = [
-        el.text for el in path_element.path_array.iterchildren()
-    ]
-    if properties["datatype_property"] == "empty":
-        properties["datatype_property"] = None
+class WissKIPath:
+    def __init__(self, path_element: etree._Element):
+        if path_element.tag != "path":
+            # TODO @lupl needs to create a schema for WissKI paths and validate against it
+            raise ValueError("WissKIPath expects a <path> element")
 
-    properties["fields"] = {}
-    properties["parents"] = {}
+        # raw data from WissKI XML -- these are all lxml 'ObjectifiedElement's
+        # child tags are unique so store in dict
+        self.xml = {child.tag: child for child in path_element.iterchildren()}
 
-    if properties["fieldtype"] and properties["fieldtype"] != "entity_reference":
-        # set python field type
-        properties["type"] = WISSKI_TYPES[properties["fieldtype"]]
+        # computed/derived fields
+        self.cardinality = self.xml["cardinality"]
+        self.path_array = [el.text for el in path_element.path_array.iterchildren()]
 
-    if properties["is_group"]:
-        properties["class_name"] = id_to_classname(str(properties["id"]))
+        self.id = self.xml["id"].text
+        self.fields = {}
+        self.parents = {}
+        # self.binding_vars = []
+
+        # TODO add to path instead?
+        self.datatype_property = (
+            self.xml["datatype_property"]
+            if self.xml["datatype_property"] != "empty"
+            else None
+        )
+
+        # set rdf class if this is a root type (== it has no parent group)
+        self.rdf_class = self.path_array[-1] if self.xml["group_id"] == 0 else None
+        self.group_id = self.xml["group_id"] if self.xml["group_id"] != 0 else None
+
         # is_group is misleading, paths are groups if their fields isn't empty
-        del properties["is_group"]
+        self.class_name = id_to_classname(self.id) if self.xml["is_group"] else None
 
-    if properties["group_id"] == 0:
-        # this is a root type
-        properties["rdf_class"] = properties["path_array"][-1]
+        self.entity_reference = self.xml["fieldtype"] == "entity_reference"
 
-    return (path_element.id, properties)
-
-
-def root_type_dict(paths: list[dict]):
-    # create rdf class to type mapping
-    return {path["rdf_class"]: path for path in paths if "rdf_class" in path}
+        # set python field type
+        self.type = (
+            WISSKI_TYPES[self.xml["fieldtype"]]
+            if self.xml["fieldtype"] and not self.entity_reference
+            else None
+        )
 
 
-def parse_pathbuilder_paths(xml: pathlib.Path | str):
+def root_type_dict(paths: list[WissKIPath]) -> dict[str, WissKIPath]:
+    """Creates a dict which maps rdf class uris to WisskIPath types"""
+    return {path.rdf_class: path for path in paths if path.rdf_class}
+
+
+def parse_pathbuilder_paths(xml: pathlib.Path | str) -> list[WissKIPath]:
     """Parses a pathbuilder XML definition from a file or XML string. Returns as a flat dict of WissKIPaths"""
     if isinstance(xml, pathlib.Path):
         root_element = objectify.parse(xml).getroot()
     else:
         root_element = objectify.fromstring(xml)
 
-    # parse flat list of paths
-    return dict(
-        parse_path(path) for path in root_element.iterchildren() if path.enabled
-    )
+    return [
+        WissKIPath(path_element)
+        for path_element in root_element.iterchildren()
+        if path_element.enabled
+    ]
 
 
-def nest_paths(paths):
-    root_types = root_type_dict(paths.values())
+def nest_paths(paths: list[WissKIPath]):
+    """Adds field, parent and entity_references to a flat list of paths"""
+    root_types = root_type_dict(paths)
+    path_dict = {path.id: path for path in paths}
 
     # create nested structure
-    for path in paths.values():
-        if path["group_id"]:
-            paths[path["group_id"]]["fields"][path["id"]] = path
-            if path["fieldtype"] == "entity_reference":
+    for path in paths:
+        if path.group_id:
+            path_dict[path.group_id].fields[path.id] = path
+            if path.entity_reference:
                 # look up based on CRM type
                 try:
-                    path["reference"] = root_types[path["path_array"][-1]]
-                    path["reference"]["parents"][path["id"]] = path
+                    path.entity_reference = root_types[path.path_array[-1]]
+                    path.entity_reference.parents[path.id] = path
                     # path["fields"] = path["reference"]["fields"]
                     # path["is_group"] = 1
                 except KeyError as e:
                     logging.warning(
-                        f"path {path['id']} is an entity_reference, but no known path for target CRM class {e}"
+                        f"path {path.id} is an entity_reference, but no known path for target CRM class {e}"
                     )
-    return (root_types, paths)
+                    path.entity_reference = False
+
+    return (root_types, path_dict)
 
 
 def parse_paths(file):
