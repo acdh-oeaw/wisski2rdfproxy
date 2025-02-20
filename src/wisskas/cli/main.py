@@ -9,7 +9,7 @@ from wisskas.cli.endpoints import register_subcommand as endpoints_args
 from wisskas.cli.paths import register_subcommand as paths_args
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(formatter_class=RichHelpFormatter)
     parser.add_argument(
         "-input",
@@ -59,7 +59,7 @@ def main():
         help="Increase the verbosity of the logging output: default is WARNING, use -v for INFO, -vv for DEBUG",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     logging.basicConfig(
         level=max(10, 30 - 10 * args.verbose), format="%(levelname)s: %(message)s"
