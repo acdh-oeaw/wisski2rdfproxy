@@ -35,14 +35,14 @@ def main(args):
         paths = parse_pathbuilder_paths(args.input)
 
         if args.all:
-            args.path_id = sorted(paths.keys())
+            args.path_id = sorted([path.id for path in paths])
 
         if args.path_id:
             for path_id in args.path_id:
-                rprint(paths[path_id])
+                rprint(next(filter(lambda p: p.id == path_id, paths)).xml)
         else:
-            for path in paths.keys():
-                rprint(f"- {path}")
+            for path in paths:
+                rprint(f"- {path.id}")
 
         rprint(file_rule(f"{len(paths)} paths"))
 
@@ -50,7 +50,7 @@ def main(args):
         root_types, paths = parse_paths(args.input)
 
         if args.all:
-            args.path_id = sorted(path["id"] for path in root_types.values())
+            args.path_id = sorted(path.id for path in root_types.values())
 
         if args.path_id:
             from pygments.styles import get_style_by_name
@@ -66,33 +66,30 @@ def main(args):
             styles = get_style_by_name(args.color_theme).styles
 
             def generate_rich_tree(path, prefix=False):
-                if "reference" in path:
-                    # entity_reference
-                    tp = f"[{styles[Keyword]}]{path['reference']['id']}[default]/[{styles[Number]}]{path['path_array'][-1]}"
-                elif path["fieldtype"]:
-                    tp = f"[{styles[String]}]{path['fieldtype']}"
+                if path.entity_reference:
+                    tp = f"[{styles[Keyword]}]{path.entity_reference.id}[default]/[{styles[Number]}]{path.path_array[-1]}"
+                elif path.type:
+                    tp = f"[{styles[String]}]{path.type}"
                 elif prefix:
-                    tp = f"[{styles[Comment]}]{path['path_array'][-1]}"
+                    tp = f"[{styles[Comment]}]{path.path_array[-1]}"
                 else:
-                    tp = f"[{styles[Number]}]{path['path_array'][-1]}"
-                if prefix and path["cardinality"] == -1:
+                    tp = f"[{styles[Number]}]{path.path_array[-1]}"
+                if prefix and path.cardinality == -1:
                     tp = f"list[ {tp} [default]]"
                 tree = Tree(
-                    f"[{styles[Operator]}][{styles[Literal]}]{path['id']}[default]: {tp}[default]"
+                    f"[{styles[Operator]}][{styles[Literal]}]{path.id}[default]: {tp}[default]"
                 )
-                for field in path["fields"].values():
+                for field in path.fields.values():
                     tree.add(generate_rich_tree(field, True))
 
                 return tree
 
             for path_id in args.path_id:
-                if "rdf_class" in paths[path_id]:
+                if paths[path_id].rdf_class:
                     rprint(generate_rich_tree(paths[path_id]), "")
         else:
             for rdf_class, path in root_types.items():
-                rprint(f"- {path['id']}: {rdf_class}")
+                rprint(f"- {path.id}: {rdf_class}")
         rprint(
-            Rule(
-                f"{args.input.name}: {len(paths)} paths, {len([p for p in paths.values() if 'rdf_class' in p])} root types"
-            )
+            Rule(f"{args.input.name}: {len(paths)} paths, {len(root_types)} root types")
         )

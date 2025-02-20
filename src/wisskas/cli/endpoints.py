@@ -118,8 +118,8 @@ def main(args):
         filename = f"{args.output_prefix or ''}_{path_to_filename(path)}"
 
         # this is the local filename
-        root["filename"] = filename.rsplit("/", 1)[-1]
-        root["details"] = path.endswith("details")
+        root.filename = filename.rsplit("/", 1)[-1]
+        root.details = path.endswith("details")
 
         model = serialize_model(root)
         query = serialize_query(root, args.prefix)
